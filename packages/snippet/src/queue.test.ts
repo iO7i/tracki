@@ -10,7 +10,13 @@ beforeEach(() => {
 
 function makeQueue() {
   const sent: Batch[] = [];
-  const q = new EventQueue("pk_test", "http://localhost/v1/events", (_e, b) => sent.push(b));
+  const q = new EventQueue(
+    "pk_test",
+    "http://localhost/v1/events",
+    (_e, b) => sent.push(b),
+    "granted",
+    { now: () => 0 },
+  );
   return { q, sent };
 }
 

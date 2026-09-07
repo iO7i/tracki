@@ -81,6 +81,7 @@ function boot(): void {
   const queue = new EventQueue(config.key, config.endpoint);
   // Gate BEFORE any producer runs so the first auto-captured pageview respects consent.
   queue.setInitialConsent(config.consent);
+  window.addEventListener("online", () => queue.online());
   installCapture(queue);
 
   // FAQ widget + action runtime: both live next to the events endpoint.

@@ -23,6 +23,7 @@ export interface DeviceInfo {
 }
 
 export interface EventInput {
+  eventId?: string;
   type: string;
   ts: number;
   path?: string;
