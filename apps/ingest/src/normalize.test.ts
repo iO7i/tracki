@@ -43,7 +43,7 @@ describe("normalizeBatch", () => {
 
   it("defaults user_id to empty for anonymous batches", () => {
     const anon = { ...batch, userId: undefined };
-    const [e] = normalizeBatch(anon, ref, "UA/1.0", 1);
+    const [e] = normalizeBatch(anon, ref, "UA/1.0", batch.sentAt);
     expect(e?.user_id).toBe("");
   });
 
@@ -59,7 +59,7 @@ describe("normalizeBatch", () => {
         sdk: "flutter",
       },
     };
-    const [e] = normalizeBatch(mobile, ref, "okhttp/4.12.0", 1);
+    const [e] = normalizeBatch(mobile, ref, "okhttp/4.12.0", batch.sentAt);
     expect(e?.platform).toBe("android");
     expect(e?.app_version).toBe("3.2.1");
     expect(e?.device_model).toBe("SM-S918B");
@@ -68,7 +68,12 @@ describe("normalizeBatch", () => {
   });
 
   it("web batches (no device block) default platform to web with empty fields", () => {
-    const [e] = normalizeBatch(batch, ref, "Mozilla/5.0 (Windows NT 10.0) Chrome/120.0", 1);
+    const [e] = normalizeBatch(
+      batch,
+      ref,
+      "Mozilla/5.0 (Windows NT 10.0) Chrome/120.0",
+      batch.sentAt,
+    );
     expect(e?.platform).toBe("web");
     expect(e?.app_version).toBe("");
     expect(e?.device_model).toBe("");
@@ -77,7 +82,7 @@ describe("normalizeBatch", () => {
   it("coarsens the User-Agent rather than storing it raw (Audit M1)", () => {
     const ua =
       "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML) Version/17.0 Mobile Safari/604.1";
-    const [e] = normalizeBatch(batch, ref, ua, 1);
+    const [e] = normalizeBatch(batch, ref, ua, batch.sentAt);
     expect(e?.ua).toBe("Safari/iOS");
     expect(e?.ua).not.toContain("AppleWebKit");
   });
@@ -103,7 +108,7 @@ describe("normalizeBatch — Vertex named-event allowlist", () => {
         },
       ],
     };
-    const [e] = normalizeBatch(vertex, ref, "UA/1.0", 1);
+    const [e] = normalizeBatch(vertex, ref, "UA/1.0", batch.sentAt);
     if (!e) return;
     expect(e.props).toContain("signup_completed");
     expect(e.props).toContain("salla");
@@ -116,9 +121,11 @@ describe("normalizeBatch — Vertex named-event allowlist", () => {
   it("leaves unrecognized track names to the generic scrub", () => {
     const other: EventBatch = {
       ...batch,
-      events: [{ type: "track", ts: 1, props: { name: "custom_thing", label: "SAVE10" } }],
+      events: [
+        { type: "track", ts: batch.sentAt, props: { name: "custom_thing", label: "SAVE10" } },
+      ],
     };
-    const [e] = normalizeBatch(other, ref, "UA/1.0", 1);
+    const [e] = normalizeBatch(other, ref, "UA/1.0", batch.sentAt);
     expect(e?.props).toContain("custom_thing");
     expect(e?.props).toContain("SAVE10");
   });

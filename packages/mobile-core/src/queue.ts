@@ -1,4 +1,4 @@
-import type { Identity } from "./identity";
+import { type Identity, defaultIdFactory } from "./identity";
 import type { Batch, Clock, DeviceInfo, EventInput, Transport } from "./types";
 
 /** Same cadence as the web snippet. */
@@ -31,8 +31,9 @@ export class EventQueue {
   }
 
   enqueue(event: EventInput): void {
+    const identified = { ...event, eventId: event.eventId ?? defaultIdFactory("evt") };
     this.identity.touchSession();
-    this.buffer.push(event);
+    this.buffer.push(identified);
     if (this.buffer.length >= FLUSH_SIZE) {
       void this.flush();
     } else if (!this.timer) {

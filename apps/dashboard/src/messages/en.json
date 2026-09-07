@@ -221,7 +221,7 @@
   },
   "struggleTypes": {
     "rage_click": "Rage click",
-    "dead_click": "Dead click",
+    "dead_click": "Repeated non-control clicks",
     "repeated_error": "Repeated errors",
     "repeated_submit": "Repeated submit",
     "form_abandon": "Form abandon",

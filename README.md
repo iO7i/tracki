@@ -4,6 +4,8 @@ Arabic-first behavioral intelligence for websites and mobile applications.
 
 Created by **Hosam Talbi**.
 
+Tracki was developed privately from June–July 2026 and published as a cleaned public snapshot in September 2026.
+
 Tracki connects customer behavior to timely assistance. It detects friction such as repeated payment failures, OTP loops, rage clicks, and abandoned onboarding, then delivers contextual help through web interfaces, mobile experiences, or WhatsApp. An Arabic and English dashboard brings customer journeys, interventions, and outcomes together.
 
 ## Capabilities
@@ -31,7 +33,7 @@ Tracki is a TypeScript monorepo managed with pnpm and Turborepo. Web and mobile 
 | `packages/whatsapp` | Meta Cloud API integration and local simulator |
 | `packages/shared` | Event contracts, privacy masking, normalization, and scoring |
 
-PostgreSQL stores application data, ClickHouse stores behavioral events, and Redis supports queues, windows, caching, and live updates. Docker Compose provides local infrastructure.
+PostgreSQL stores application data, the durable telemetry inbox, and transactional detector state. ClickHouse stores behavioral events and detections; Redis supports caching, rate limits, and best-effort live updates. Docker Compose provides local infrastructure.
 
 ## Run locally
 
@@ -61,7 +63,7 @@ pnpm test
 pnpm build
 ```
 
-Playwright tests run with `pnpm e2e` against a running dashboard. Integration checks under `apps/ingest/bench` exercise the live API and stores and require infrastructure and migrations.
+CI also runs the infrastructure regression suite against PostgreSQL, Redis, and ClickHouse service containers, followed by Chromium Playwright tests against the built dashboard and ingestion API. Run the infrastructure suite with `pnpm --filter @tracki/ingest exec vitest run --config vitest.integration.config.ts` against a dedicated test database. It creates telemetry fixtures and deliberately terminates a worker database connection. Playwright runs with `pnpm e2e` against the running stack; it includes an injected delivery failure followed by a real API retry. Exploratory checks under `apps/ingest/bench` are separate from the regression suite.
 
 ## Scope and limitations
 
@@ -69,9 +71,12 @@ Tracki is a portfolio implementation with web and mobile functionality. Flutter,
 
 Tenant-scoped access and ingestion-time masking are part of the implementation. Deployment requires appropriate credentials, infrastructure configuration, and validation for the intended environment.
 
+Telemetry delivery uses stable client event IDs and a durable acceptance ledger. Event-time windows preserve batched timing; arrivals older than the processed visitor watermark are stored without retroactive detection. Browser persistence is bounded and consent-gated, not a lossless archive. See [Reliability and operations](docs/RELIABILITY.md) for retry guarantees, legacy-client compatibility, retention, migration cutover, and remaining limitations. Existing deployments must follow the cutover procedure before upgrading.
+
 ## Documentation
 
 - [Deployment](docs/DEPLOY.md)
+- [Reliability and operations](docs/RELIABILITY.md)
 - [Mobile wire protocol](docs/mobile-wire-protocol.md)
 - [Mobile SDK overview](sdks/README.md)
 - [React Native SDK](packages/sdk-react-native/README.md)

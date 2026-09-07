@@ -87,3 +87,68 @@ export function containsPii(text: string): boolean {
   const pans = text.match(new RegExp(PAN_RE.source, "g"));
   return pans?.some((m) => isLuhnValid(m.replace(/\D/g, ""))) ?? false;
 }
+
+/** Normalize separators/case and common credential prefixes without inspecting values. */
+export function isSensitiveKey(key: string): boolean {
+  const normalized = key.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  return /(?:password|passwd|pwd|secret|token|authorization|cookie|apikey|privatekey)$/.test(
+    normalized,
+  );
+}
+
+function decode(value: string): string {
+  let current = value;
+  for (let i = 0; i < 2; i++) {
+    try {
+      const next = decodeURIComponent(current.replace(/\+/g, " "));
+      if (next === current) break;
+      current = next;
+    } catch {
+      break;
+    }
+  }
+  return current;
+}
+
+/** Preserve harmless URL encoding; inspect decoded query keys and values. */
+export function scrubText(text: string): string {
+  const bounded = text.slice(0, 8192);
+  const query = bounded.indexOf("?");
+  if (query < 0) return maskPii(bounded);
+  const hash = bounded.indexOf("#", query);
+  const end = hash < 0 ? bounded.length : hash;
+  const params = bounded
+    .slice(query + 1, end)
+    .split("&")
+    .slice(0, 100)
+    .map((part) => {
+      const eq = part.indexOf("=");
+      const key = eq < 0 ? part : part.slice(0, eq);
+      const raw = eq < 0 ? "" : part.slice(eq + 1);
+      const decodedKey = decode(key);
+      const value = decode(raw);
+      const safeKey = maskPii(decodedKey);
+      const safe = isSensitiveKey(decodedKey) ? "[redacted]" : maskPii(value);
+      return `${safeKey === decodedKey ? key : encodeURIComponent(safeKey)}${eq < 0 ? "" : `=${safe === value ? raw : encodeURIComponent(safe)}`}`;
+    })
+    .join("&");
+  return `${maskPii(bounded.slice(0, query))}?${params}${hash < 0 ? "" : maskPii(bounded.slice(hash))}`;
+}
+
+/** Shared client/server protection. Limits apply to breadth as well as depth. */
+export function scrubProperties(value: unknown): unknown {
+  let remaining = 512;
+  const visit = (v: unknown, depth: number): unknown => {
+    if (--remaining < 0) return "[truncated]";
+    if (typeof v === "string") return scrubText(v);
+    if (v === null || typeof v !== "object") return v;
+    if (depth >= 8) return "[truncated]";
+    if (Array.isArray(v)) return v.slice(0, 100).map((x) => visit(x, depth + 1));
+    const out: Record<string, unknown> = Object.create(null);
+    for (const [key, item] of Object.entries(v).slice(0, 100)) {
+      out[maskPii(key).slice(0, 256)] = isSensitiveKey(key) ? "[redacted]" : visit(item, depth + 1);
+    }
+    return out;
+  };
+  return visit(value, 0);
+}

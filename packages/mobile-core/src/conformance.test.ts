@@ -69,7 +69,14 @@ describe("conformance: journey-batch.json", () => {
     const { transport } = await runJourney();
     const batches = transport.posts.filter((p) => p.url.endsWith("/v1/events"));
     expect(batches).toHaveLength(1);
-    expect(batches[0]?.body as Batch).toEqual(journey.expectedBatch);
+    const batch = batches[0]?.body as Batch;
+    const ids = batch.events.map((event) => event.eventId);
+    expect(ids.every((id) => typeof id === "string" && /^evt_[A-Za-z0-9_-]+$/.test(id))).toBe(true);
+    expect(new Set(ids).size).toBe(batch.events.length);
+    // The optional identity extension leaves every legacy protocol field unchanged.
+    expect({ ...batch, events: batch.events.map(({ eventId, ...event }) => event) }).toEqual(
+      journey.expectedBatch,
+    );
   });
 });
 

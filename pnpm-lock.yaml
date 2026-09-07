@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  postgres@3.4.9:
+    hash: jdnpxvzjbq7tpivz4vzt3tujsy
+    path: patches/postgres@3.4.9.patch
+
 importers:
 
   .:
@@ -40,7 +45,7 @@ importers:
         version: 2.4.3
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(gel@2.2.0)(postgres@3.4.9)
+        version: 0.45.2(gel@2.2.0)(postgres@3.4.9(patch_hash=jdnpxvzjbq7tpivz4vzt3tujsy))
       ioredis:
         specifier: ^5.4.2
         version: 5.11.1
@@ -52,7 +57,7 @@ importers:
         version: 4.13.0(next@15.5.19(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       postgres:
         specifier: ^3.4.5
-        version: 3.4.9
+        version: 3.4.9(patch_hash=jdnpxvzjbq7tpivz4vzt3tujsy)
       react:
         specifier: ^19.0.0
         version: 19.2.7
@@ -122,7 +127,7 @@ importers:
         version: 5.11.1
       postgres:
         specifier: ^3.4.5
-        version: 3.4.9
+        version: 3.4.9(patch_hash=jdnpxvzjbq7tpivz4vzt3tujsy)
     devDependencies:
       '@tracki/mobile-core':
         specifier: workspace:*
@@ -434,6 +439,7 @@ packages:
 
   '@clickhouse/client-common@1.20.0':
     resolution: {integrity: sha512-s0oDSwxQyJO/Xwne6sNE7xTAlms72Hq2AHzHAB9oSOBfiaXTzQOyHQrhufJ9ldPJTwr4L47/RxG1i6I0I8Xy9A==}
+    deprecated: 'Deprecated: import from @clickhouse/client or @clickhouse/client-web instead.'
 
   '@clickhouse/client@1.20.0':
     resolution: {integrity: sha512-LfHZ9bZZhc7KrNFVa9v73JMqwsP+m/5SgwdKMmxze4Urcw6pE0F7RNog3Lzx3GKRnJr3Hd15uDlIbqaDa9BbgA==}
@@ -475,11 +481,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -5056,10 +5062,10 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.22.4
 
-  drizzle-orm@0.45.2(gel@2.2.0)(postgres@3.4.9):
+  drizzle-orm@0.45.2(gel@2.2.0)(postgres@3.4.9(patch_hash=jdnpxvzjbq7tpivz4vzt3tujsy)):
     optionalDependencies:
       gel: 2.2.0
-      postgres: 3.4.9
+      postgres: 3.4.9(patch_hash=jdnpxvzjbq7tpivz4vzt3tujsy)
 
   dunder-proto@1.0.1:
     dependencies:
@@ -6043,7 +6049,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postgres@3.4.9: {}
+  postgres@3.4.9(patch_hash=jdnpxvzjbq7tpivz4vzt3tujsy): {}
 
   pretty-format@29.7.0:
     dependencies:

@@ -15,6 +15,7 @@ import { getManifest } from "./actions.js";
 import { popAssist } from "./assist.js";
 import { handleChat } from "./chat.js";
 import { REDIS_KEYS } from "./config.js";
+import { acceptEvents } from "./inbox";
 import { allowRequest, resolveKey } from "./keys.js";
 import { normalizeBatch } from "./normalize.js";
 import {
@@ -65,6 +66,7 @@ export function buildServer(): FastifyInstance {
 
   // Audit N4: health checks all three dependencies, not just Redis.
   const healthCh = createClickHouse();
+  app.addHook("onClose", async () => healthCh.close());
   app.get("/health", async () => {
     const checks = { redis: false, postgres: false, clickhouse: false };
     await Promise.all([
@@ -224,7 +226,7 @@ export function buildServer(): FastifyInstance {
     // Always 202 on the happy path and on benign drops — never leak key validity
     // or validation detail to arbitrary origins.
     const parsed = eventBatchSchema.safeParse(request.body);
-    if (!parsed.success) return reply.code(202).send({ ok: true });
+    if (!parsed.success) return reply.code(400).send({ error: "invalid event batch" });
     const batch = parsed.data;
 
     if (!(await allowRequest(batch.key))) return reply.code(429).send({ ok: false });
@@ -233,14 +235,18 @@ export function buildServer(): FastifyInstance {
     if (!ref) return reply.code(202).send({ ok: true });
 
     const ua = request.headers["user-agent"] ?? "";
-    const events = normalizeBatch(batch, ref, ua, Date.now());
+    let normalized: ReturnType<typeof normalizeBatch>;
+    try {
+      normalized = normalizeBatch(batch, ref, ua, Date.now());
+    } catch {
+      return reply.code(400).send({ error: "invalid event time" });
+    }
+    const events = await acceptEvents(normalized);
 
-    // Full rows go to the CH buffer; the live channel gets only a projection —
+    // Full rows enter the durable inbox; the live channel gets only a projection —
     // never the raw row (Audit M1: no UA / org_id / received_at to the client).
-    const serialized = events.map((e) => JSON.stringify(e));
     const channel = REDIS_KEYS.liveChannel(ref.projectId);
     const pipeline = redis().pipeline();
-    pipeline.rpush(REDIS_KEYS.buffer, ...serialized);
     for (const e of events) {
       pipeline.publish(
         channel,
@@ -257,7 +263,8 @@ export function buildServer(): FastifyInstance {
         }),
       );
     }
-    await pipeline.exec();
+    // The database commit is the durable acknowledgment; pub/sub is optional.
+    await pipeline.exec().catch(() => {});
 
     for (const e of events) {
       if (e.type === "identify" && e.user_id) {
@@ -266,7 +273,7 @@ export function buildServer(): FastifyInstance {
     }
 
     // implementation: deliver any pending Live Assist for this session (pop-and-clear).
-    const assist = await popAssist(ref.projectId, batch.sessionId);
+    const assist = await popAssist(ref.projectId, batch.sessionId).catch(() => null);
     return reply.code(202).send(assist ? { ok: true, assist } : { ok: true });
   });
 

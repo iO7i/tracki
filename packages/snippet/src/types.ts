@@ -13,6 +13,7 @@ export type EventType =
   | "track";
 
 export interface EventInput {
+  eventId?: string;
   type: EventType;
   ts: number;
   path?: string;

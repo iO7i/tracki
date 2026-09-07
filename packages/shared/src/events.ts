@@ -118,6 +118,10 @@ const shortStr = z.string().max(MAX_STR);
 
 /** A single event as emitted by the snippet. */
 export const eventInputSchema = z.object({
+  eventId: z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,128}$/)
+    .optional(),
   type: z.enum(EVENT_TYPES),
   // Client timestamp (ms since epoch). Server also stamps received_at.
   ts: z.number().int().positive(),
@@ -160,9 +164,9 @@ export type DeviceContext = z.infer<typeof deviceContextSchema>;
 export const eventBatchSchema = z.object({
   // Project public key (pk_…) — resolved server-side to org/project.
   key: z.string().min(3).max(64),
-  anonId: z.string().min(1).max(64),
+  anonId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   userId: z.string().min(1).max(128).optional(),
-  sessionId: z.string().min(1).max(64),
+  sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   sentAt: z.number().int().positive(),
   // implementation: mobile SDKs describe their runtime; absent ⇒ web.
   device: deviceContextSchema.optional(),

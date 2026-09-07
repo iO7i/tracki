@@ -301,6 +301,6 @@ export async function projectForWaId(waId: string): Promise<string | null> {
 }
 
 export async function closePg(): Promise<void> {
-  await sql?.end();
+  await sql?.end({ timeout: 5 });
   sql = null;
 }

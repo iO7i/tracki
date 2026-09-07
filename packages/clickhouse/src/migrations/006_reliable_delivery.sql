@@ -1,0 +1,5 @@
+-- Forward migration executed by migrate.ts using copy + atomic table exchange.
+-- Upgrade events/struggles to identity-keyed ReplacingMergeTree without dropping
+-- established data. Preserve the old tables as rollback copies.
+-- Historical 003_events_dedup.sql must not be executed directly.
+-- Stop all writers and follow docs/RELIABILITY.md before running the migration.

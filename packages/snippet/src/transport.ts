@@ -1,39 +1,44 @@
 import type { Batch } from "./types";
 
-/**
- * Send a batch to the ingest endpoint. Uses sendBeacon on page-hide (survives
- * unload), fetch+keepalive otherwise. Always fail-silent — never throws into
- * the host page.
- */
-export function send(
+/** A queued beacon is not a server acknowledgment. Preserve it for retry. */
+export async function send(
   endpoint: string,
   batch: Batch,
   useBeacon: boolean,
   onResponse?: (data: unknown) => void,
-): void {
-  try {
-    const body = JSON.stringify(batch);
-    if (useBeacon && typeof navigator !== "undefined" && navigator.sendBeacon) {
-      const blob = new Blob([body], { type: "application/json" });
-      navigator.sendBeacon(endpoint, blob);
-      return;
+): Promise<boolean> {
+  const body = JSON.stringify(batch);
+  if (useBeacon && typeof navigator !== "undefined" && navigator.sendBeacon) {
+    try {
+      if (navigator.sendBeacon(endpoint, new Blob([body], { type: "application/json" })))
+        return false;
+    } catch {
+      /* fall back to fetch when rejected */
     }
-    void fetch(endpoint, {
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(endpoint, {
       method: "POST",
       body,
       headers: { "content-type": "application/json" },
       keepalive: true,
       mode: "cors",
       credentials: "omit",
-    })
-      .then((res) => (onResponse ? res.json() : null))
-      .then((data) => {
-        if (data && onResponse) onResponse(data);
-      })
-      .catch(() => {
-        /* fail-silent */
-      });
+      signal: controller.signal,
+    });
+    if (!response.ok) return false;
+    // Response parsing/widget failure must not invalidate an acknowledged write.
+    try {
+      onResponse?.(await response.json());
+    } catch {
+      /* optional assistance */
+    }
+    return true;
   } catch {
-    /* fail-silent */
+    return false;
+  } finally {
+    clearTimeout(timeout);
   }
 }

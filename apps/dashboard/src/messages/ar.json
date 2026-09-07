@@ -221,7 +221,7 @@
   },
   "struggleTypes": {
     "rage_click": "نقر عصبي",
-    "dead_click": "نقر على عنصر غير فعّال",
+    "dead_click": "نقرات متكررة على عنصر غير تحكمي",
     "repeated_error": "أخطاء متكرّرة",
     "repeated_submit": "إرسال متكرّر",
     "form_abandon": "هجر نموذج",

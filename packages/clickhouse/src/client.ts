@@ -19,6 +19,8 @@ export function createClickHouse(env: ClickHouseEnv = {}): ClickHouseClient {
     clickhouse_settings: {
       // Deterministic for tests; revisit async_insert under load.
       async_insert: 0,
+      // Retry duplicates are collapsed at read time, not only by background merges.
+      final: 1,
     },
   });
 }

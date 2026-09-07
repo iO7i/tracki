@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import {
   HIGH_INTENT_PATH,
   RAGE_MIN_CLICKS,
@@ -43,8 +43,8 @@ const PERM_MIN = 2; // same permission
 // part of onboarding; checkout/loan/kyc abandons stay events + revenue signals).
 const ONBOARDING_FLOWS = new Set(["onboarding", "registration"]);
 
-// Tags the snippet's click `closest()` resolves to — anything else the user
-// clicked is non-interactive (a dead click) (implementation).
+// Native controls only. Other tags may still have event handlers; this classifier
+// measures repeated non-control clicks, not whether the application responded.
 const INTERACTIVE = new Set([
   "a",
   "button",
@@ -82,7 +82,7 @@ function sig(props: string): string {
 }
 
 function key(e: StoredEvent, ...parts: string[]): string {
-  return `sd:${e.project_id}:${e.session_id}:${parts.join(":")}`;
+  return `sd:${e.org_id}:${e.project_id}:${e.anon_id}:${e.session_id}:${parts.join(":")}`;
 }
 
 function pathBonus(path: string): number {
@@ -122,7 +122,9 @@ export async function detectBatch(
       anon_id: e.anon_id,
       user_id: e.user_id,
       session_id: e.session_id,
-      struggle_id: randomUUID(),
+      struggle_id: createHash("sha256")
+        .update(JSON.stringify([e.org_id, e.project_id, e.event_id, type, element]))
+        .digest("hex"),
       type,
       severity: severityFromScore(score),
       path: e.path,
@@ -132,13 +134,13 @@ export async function detectBatch(
       score,
       platform: e.platform,
       app_version: e.app_version,
-      ts: e.received_at,
+      ts: e.ts,
     };
   };
 
-  for (const e of events) {
-    // Audit M1: window on server time (received_at), never client-controlled ts.
-    const t = e.received_at;
+  for (const e of [...events].sort((a, b) => a.ts - b.ts || a.event_id.localeCompare(b.event_id))) {
+    // Ingress validates time. Never collapse event spacing to batch arrival time.
+    const t = e.ts;
 
     if (e.type === "error") {
       await store.setFlag(key(e, "haderr"), ERROR_FLAG_TTL_MS);
@@ -163,13 +165,18 @@ export async function detectBatch(
         count >= RAGE_MIN_CLICKS &&
         (await store.setFlagIfAbsent(key(e, "deb", "rage", s), DEBOUNCE_MS))
       ) {
-        // Non-interactive target ⇒ the user is clicking dead UI (dead_click);
-        // interactive ⇒ classic rage on a real control.
+        // Preserve the legacy dead_click wire name without asserting unresponsiveness.
         const el = tag || "element";
         out.push(
           INTERACTIVE.has(tag)
             ? make(e, "rage_click", `${count} rapid clicks on ${el}`, count, s)
-            : make(e, "dead_click", `${count} clicks on a non-interactive ${el}`, count, s),
+            : make(
+                e,
+                "dead_click",
+                `${count} rapid clicks on ${el}; responsiveness unknown`,
+                count,
+                s,
+              ),
         );
       }
     }
@@ -275,7 +282,7 @@ export async function detectBatch(
     if (e.type === "app_foreground" && parseProps(e.props).launch === "cold") {
       // Cold launches keyed on the VISITOR, not the session — each restart
       // typically begins a new session, which would reset a session window.
-      const restartKey = `sd:${e.project_id}:anon:${e.anon_id}:restart`;
+      const restartKey = `sd:${e.org_id}:${e.project_id}:anon:${e.anon_id}:restart`;
       const count = await store.pushTimestamped(restartKey, t, RESTART_WINDOW_MS);
       if (count >= RESTART_MIN && (await store.setFlagIfAbsent(`${restartKey}:deb`, DEBOUNCE_MS))) {
         out.push(make(e, "app_restart_loop", `${count} cold app starts within 10min`, count));

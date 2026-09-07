@@ -8,6 +8,44 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgres://tracki:tracki@localhost:5432/tracki
+      REDIS_URL: redis://localhost:6379
+      CLICKHOUSE_URL: http://localhost:8123
+      CLICKHOUSE_USER: tracki
+      CLICKHOUSE_PASSWORD: tracki
+      CLICKHOUSE_DB: tracki
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_SNIPPET_URL: http://localhost:4000/tracki.js
+      TRACKI_ALLOW_HEURISTIC_LLM: "1"
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tracki
+          POSTGRES_PASSWORD: tracki
+          POSTGRES_DB: tracki
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tracki"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8-alpine
+        env:
+          CLICKHOUSE_USER: tracki
+          CLICKHOUSE_PASSWORD: tracki
+          CLICKHOUSE_DB: tracki
+        ports: ["8123:8123"]
+        options: >-
+          --health-cmd "clickhouse-client --user tracki --password tracki --query 'SELECT 1'"
+          --health-interval 5s --health-timeout 3s --health-retries 30
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +70,29 @@ jobs:
 
       - name: Build
         run: pnpm build
-        env:
-          DATABASE_URL: postgres://tracki:tracki@localhost:5432/tracki
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
-          NEXT_PUBLIC_SNIPPET_URL: https://cdn.tracki.app/tracki.js
+
+      - name: Infrastructure regression suite
+        run: pnpm --filter @tracki/ingest exec vitest run --config vitest.integration.config.ts
+
+      - name: Browser setup
+        run: |
+          pnpm db:migrate
+          pnpm --filter @tracki/e2e exec playwright install --with-deps chromium
+
+      - name: Playwright E2E
+        run: |
+          pnpm --filter @tracki/dashboard start > /tmp/tracki-dashboard.log 2>&1 &
+          pnpm --filter @tracki/ingest start > /tmp/tracki-ingest.log 2>&1 &
+          pnpm --filter @tracki/demo-site serve > /tmp/tracki-demo.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/en/login > /dev/null && curl -fsS http://localhost:4000/health > /dev/null && curl -fsS http://localhost:4321/delivery.html > /dev/null; then break; fi
+            sleep 2
+          done
+          pnpm e2e
+
+      - name: Upload browser traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-traces
+          path: e2e/test-results
