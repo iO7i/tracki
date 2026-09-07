@@ -37,6 +37,8 @@ test("signup → create org → create project → snippet tag visible (EN)", as
   await expect(snippet).toContainText("<script async");
   const publicKey = (await snippet.textContent())?.match(/data-key="([^"]+)"/)?.[1];
   expect(publicKey).toBeTruthy();
+  // Exercise a customer page, not the dashboard's self-only CSP boundary.
+  await page.goto("http://localhost:4321/delivery.html");
   const attempts: Array<{ events: Array<{ eventId: string }> }> = [];
   await page.route("**/v1/events", async (route) => {
     attempts.push(route.request().postDataJSON());
