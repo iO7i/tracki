@@ -20,6 +20,8 @@ export interface QueueOptions {
 const MAX_EVENTS = 200;
 const MAX_BYTES = 48_000;
 const MAX_AGE = 23 * 60 * 60 * 1000;
+const bytes = (value: unknown): number =>
+  new TextEncoder().encode(JSON.stringify(value)).byteLength;
 
 export class EventQueue {
   private buffer: Entry[] = [];
@@ -63,7 +65,7 @@ export class EventQueue {
     this.restored = true;
     try {
       const raw = this.storage?.getItem(this.storageKey);
-      if (raw && raw.length <= MAX_BYTES) {
+      if (raw && new TextEncoder().encode(raw).byteLength <= MAX_BYTES) {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed))
           this.buffer = parsed
@@ -112,7 +114,7 @@ export class EventQueue {
       referrer: input.referrer ? scrubText(input.referrer) : undefined,
       props: input.props ? (scrubProperties(input.props) as Record<string, unknown>) : undefined,
     };
-    if (JSON.stringify(event).length > 8192) return;
+    if (bytes(event) > 8192) return;
     if (this.consent === "pending") {
       if (this.held.length >= 50) this.held.shift();
       this.held.push(event);
@@ -131,7 +133,7 @@ export class EventQueue {
   }
   private bound(): void {
     this.buffer = this.buffer.filter((e) => e.event.ts >= this.now() - MAX_AGE).slice(-MAX_EVENTS);
-    while (JSON.stringify(this.buffer).length > MAX_BYTES) this.buffer.shift();
+    while (bytes(this.buffer) > MAX_BYTES) this.buffer.shift();
     try {
       this.storage?.setItem(this.storageKey, JSON.stringify(this.buffer));
     } catch {
@@ -168,7 +170,7 @@ export class EventQueue {
         item.sessionId !== first.sessionId
       )
         break;
-      if (JSON.stringify([...entries, item]).length > MAX_BYTES) break;
+      if (bytes([...entries, item]) > MAX_BYTES) break;
       entries.push(item);
     }
     const batch: Batch = {
