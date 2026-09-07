@@ -91,7 +91,7 @@ export function installCapture(queue: EventQueue): () => void {
   });
   on(window, "popstate", fireRoute);
 
-  // Clicks (raw — struggle classification is slice 2).
+  // Clicks (raw — struggle classification is implementation).
   on(
     document,
     "click",

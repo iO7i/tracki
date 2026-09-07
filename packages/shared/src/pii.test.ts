@@ -72,7 +72,7 @@ describe("maskPii / containsPii", () => {
   });
 });
 
-describe("maskPan (slice-11 hardening)", () => {
+describe("maskPan (implementation hardening)", () => {
   it("masks a Luhn-valid PAN, keeping the last 4", () => {
     const out = maskPan("pay with 4111111111111111 now");
     expect(out).not.toContain("4111111111111111");
@@ -91,7 +91,7 @@ describe("maskPan (slice-11 hardening)", () => {
   });
 });
 
-describe("maskToken (slice-11 hardening)", () => {
+describe("maskToken (implementation hardening)", () => {
   it("masks a JWT", () => {
     const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0";
     const out = maskToken(`bearer ${jwt}`);

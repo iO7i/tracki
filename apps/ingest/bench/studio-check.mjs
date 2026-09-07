@@ -1,4 +1,4 @@
-// Slice 12 Action Studio e2e over the real stack:
+// implementation Action Studio e2e over the real stack:
 //   1) frictionSeeds (CH) reads seeded struggles → path + dominant type/element + summed friction
 //   2) Autopilot offline pipeline: seeds → deterministic playbook draft → schema-valid action
 //      (mirrors lib/action-studio.generateActionProposals incl. seed dedup)

@@ -32,7 +32,7 @@ export async function getManifest(projectId: string): Promise<ActionManifestEntr
     const parsed = actionDefinitionSchema.safeParse(row.definition);
     if (!parsed.success) continue;
     const def: ActionDefinition = parsed.data;
-    // Slice 5: struggle-trigger (Live Assist) actions are server-driven — never
+    // implementation: struggle-trigger (Live Assist) actions are server-driven — never
     // in the client manifest.
     if (def.trigger.kind === "struggle") continue;
     if (!isInSchedule(def.schedule, now)) continue;

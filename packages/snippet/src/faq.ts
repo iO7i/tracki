@@ -17,7 +17,7 @@ function lang(): "ar" | "en" {
 }
 
 /**
- * Embeddable FAQ widget (slice 4). Opens a panel with Arabic-aware search over
+ * Embeddable FAQ widget (implementation). Opens a panel with Arabic-aware search over
  * the project's published articles; emits faq_* tracking events. Rendered with
  * textContent only (no innerHTML) — content is authored but shown to visitors.
  */

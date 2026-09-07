@@ -1,6 +1,6 @@
 // Minimal SPA for the demo store. Uses History API so the snippet's SPA
 // route-change capture is exercised. Arabic-first, with a deliberately
-// awkward checkout (used as a struggle fixture in slice 2).
+// awkward checkout (used as a struggle fixture in implementation).
 
 const PRODUCTS = [
   { id: "p1", name: "عباية كلاسيكية", price: 320 },

@@ -129,7 +129,7 @@ export function createActionEngine(deps: EngineDeps) {
     try {
       deps.renderer.show(intent);
     } catch {
-      // Audit slice-3 M1 parity: a failed render is NOT an impression.
+      // Audit implementation M1 parity: a failed render is NOT an impression.
       return;
     }
     shownThisScreen.add(a.id);

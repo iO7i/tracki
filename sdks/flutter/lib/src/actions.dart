@@ -251,7 +251,7 @@ class ActionEngine {
     try {
       r.show(intent);
     } catch (_) {
-      // Audit slice-3 M1 parity: a failed render is NOT an impression.
+      // Audit implementation M1 parity: a failed render is NOT an impression.
       return;
     }
     _shownThisScreen.add(a.id);

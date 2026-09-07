@@ -1,7 +1,7 @@
 import { getAnonId, getSessionId } from "./storage";
 
 /**
- * Channel CTAs (slice 12 — "right channeling"): an action/assist CTA routes to
+ * Channel CTAs (implementation — "right channeling"): an action/assist CTA routes to
  * a channel — a URL, the FAQ widget, the Agent chat, or a WhatsApp handoff.
  * Zero-dep mirror of @tracki/shared's CTA types (shared/actions pulls zod).
  */
@@ -15,7 +15,7 @@ export interface CtaLike {
 
 export type SnippetCtaKind = "url" | "faq" | "chat" | "whatsapp";
 
-/** Effective channel, tolerating pre-slice-12 shapes (faq boolean / url-only). */
+/** Effective channel, tolerating pre-implementation shapes (faq boolean / url-only). */
 export function ctaKind(cta: CtaLike): SnippetCtaKind {
   if (cta.kind === "faq" || cta.kind === "chat" || cta.kind === "whatsapp" || cta.kind === "url") {
     return cta.kind;
@@ -38,7 +38,7 @@ function lang(): "ar" | "en" {
 }
 
 /**
- * WhatsApp opener: mint a slice-7 handoff (inquiry code + masked web context,
+ * WhatsApp opener: mint a implementation handoff (inquiry code + masked web context,
  * server-side) and open the returned wa.me deep link — same flow the Agent's
  * escalate button uses (chat.ts). Fail-silent: a failed handoff opens nothing.
  */

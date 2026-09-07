@@ -45,7 +45,7 @@ describe("actionDefinitionSchema", () => {
     expect(actionDefinitionSchema.safeParse({ ...validDef, type: "lightbox" }).success).toBe(false);
   });
 
-  // Slice 12 — channel CTAs.
+  // implementation — channel CTAs.
   const withCta = (cta: object) => ({
     ...validDef,
     content: { ...validDef.content, en: { ...validDef.content.en, cta } },
@@ -64,7 +64,7 @@ describe("actionDefinitionSchema", () => {
     expect(actionDefinitionSchema.safeParse(withCta({ label: "x" })).success).toBe(false);
   });
 
-  it("keeps parsing pre-slice-12 definitions (faq:true, url-only)", () => {
+  it("keeps parsing pre-implementation definitions (faq:true, url-only)", () => {
     expect(actionDefinitionSchema.safeParse(withCta({ label: "x", faq: true })).success).toBe(true);
     expect(
       actionDefinitionSchema.safeParse(withCta({ label: "x", url: "https://a.sa/h" })).success,
@@ -77,7 +77,7 @@ describe("actionDefinitionSchema", () => {
     );
   });
 
-  // Slice 14 — surfaces + mobile-only types.
+  // implementation — surfaces + mobile-only types.
   const step = { ar: { title: "خطوة", body: "وصف" }, en: { title: "Step", body: "Desc" } };
 
   it("accepts surface targeting and defaults to all", () => {
@@ -157,7 +157,7 @@ describe("resolveCtaKind", () => {
   });
 });
 
-describe("action proposals (slice 12)", () => {
+describe("action proposals (implementation)", () => {
   it("a proposal draft is a full, valid action", () => {
     const r = actionProposalDraftSchema.safeParse({
       name: "Checkout rescue",

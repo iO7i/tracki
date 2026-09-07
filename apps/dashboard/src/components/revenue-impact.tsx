@@ -2,7 +2,7 @@ import type { RevenueInsights } from "@/lib/revenue";
 import { getTranslations } from "next-intl/server";
 
 /**
- * Revenue Impact view (slice 13): the money hero (at-risk / recovered / recovery
+ * Revenue Impact view (implementation): the money hero (at-risk / recovered / recovery
  * rate) + the top money-losing high-intent paths. Money = measured sessions ×
  * the merchant AOV; correlation, labeled honestly. AOV unset ⇒ a prompt, never
  * a fabricated figure. Money formatted in the active locale's currency.

@@ -8,7 +8,7 @@ enum class CtaKind(val wire: String) {
     URL("url"), FAQ("faq"), CHAT("chat"), WHATSAPP("whatsapp")
 }
 
-/** Effective channel, tolerating pre-slice-12 shapes (faq boolean / url-only). */
+/** Effective channel, tolerating pre-implementation shapes (faq boolean / url-only). */
 fun ctaKind(cta: CtaContent): CtaKind = when (cta.kind) {
     "faq" -> CtaKind.FAQ
     "chat" -> CtaKind.CHAT
@@ -30,7 +30,7 @@ private val HTTPS = Regex("^https://", RegexOption.IGNORE_CASE)
 private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
 /**
- * Channel router (slice 12 "right channeling", mobile edition): a CTA opens a
+ * Channel router (implementation "right channeling", mobile edition): a CTA opens a
  * URL, the FAQ help center, the grounded Agent chat, or a WhatsApp handoff —
  * all against the existing public APIs. Fail-silent throughout.
  */
@@ -100,7 +100,7 @@ class CtaRouter(
         }))
     }
 
-    /** Mint a slice-7 handoff and open the wa.me deep link (the ME killer flow). */
+    /** Mint a implementation handoff and open the wa.me deep link (the ME killer flow). */
     @Suppress("UNCHECKED_CAST")
     fun openWhatsApp() {
         val body = linkedMapOf<String, Any?>(

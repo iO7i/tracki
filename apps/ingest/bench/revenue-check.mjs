@@ -1,4 +1,4 @@
-// Slice 13 Revenue Impact bench: seeds checkout struggles + conversions directly
+// implementation Revenue Impact bench: seeds checkout struggles + conversions directly
 // into ClickHouse (deterministic — no worker timing), then runs the REAL
 // revenueImpact / revenueByPath queries and the shared revenueImpactFrom helper.
 // Asserts at-risk/recovered/struggling counts, high-intent filtering, conversion

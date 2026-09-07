@@ -23,12 +23,12 @@ function lang(): "ar" | "en" {
 }
 
 /**
- * Renders server-driven Live Assist (slice 5). Answer mode shows the
+ * Renders server-driven Live Assist (implementation). Answer mode shows the
  * contextually-matched FAQ inline + "was this helpful?"; fallback mode shows the
  * action's authored message + escalate CTA. textContent only; once per session
- * per action; fail-silent. Slice 12: the escalate CTA routes by channel —
+ * per action; fail-silent. implementation: the escalate CTA routes by channel —
  * explicit kinds open faq/chat/whatsapp exactly; a legacy `faq:true` (no kind)
- * keeps its audited slice-5 escalation semantics (opens the Agent chat).
+ * keeps its audited implementation escalation semantics (opens the Agent chat).
  */
 export function createAssistRenderer(queue: EventQueue, handlers: ChannelHandlers = {}) {
   const shown = new Set<string>();
@@ -127,7 +127,7 @@ export function createAssistRenderer(queue: EventQueue, handlers: ChannelHandler
           if (cta.kind === "faq") handlers.openFaq?.();
           else if (cta.kind === "chat") handlers.openChat?.();
           else if (cta.kind === "whatsapp") handlers.openWhatsApp?.();
-          // Legacy slice-5 shape (faq:true, no kind): escalate to the Agent.
+          // Legacy implementation shape (faq:true, no kind): escalate to the Agent.
           else if (cta.faq) handlers.openChat?.();
           root.remove();
         });

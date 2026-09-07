@@ -2,9 +2,9 @@ import type { MobileRevenueInsights } from "@/lib/mobile";
 import { getTranslations } from "next-intl/server";
 
 /**
- * Revenue cuts added by slice 14: recovery by struggle type, by app version
+ * Revenue cuts added by implementation: recovery by struggle type, by app version
  * and by device platform — the same sessionized recovered/at-risk split as the
- * slice-13 hero, labeled correlation-not-causation. AOV unset ⇒ counts only.
+ * implementation hero, labeled correlation-not-causation. AOV unset ⇒ counts only.
  */
 export async function MobileRevenuePanels({
   insights,

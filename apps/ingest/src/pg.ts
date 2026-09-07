@@ -124,7 +124,7 @@ export async function upsertIdentity(
     ON CONFLICT (project_id, anon_id) DO UPDATE SET user_id = EXCLUDED.user_id`;
 }
 
-// --- Tracki Agent (slice 6) conversation persistence ---
+// --- Tracki Agent (implementation) conversation persistence ---
 
 export interface ConvoRow {
   id: string;
@@ -188,7 +188,7 @@ export async function markEscalated(conversationId: string): Promise<void> {
     WHERE id = ${conversationId}`;
 }
 
-// --- Tracki Connect (slice 7) WhatsApp bridge ---
+// --- Tracki Connect (implementation) WhatsApp bridge ---
 
 /** Last few user messages of a chat conversation (Agent transcript summary). */
 export async function conversationUserSummary(

@@ -18,7 +18,7 @@ import {
 import { and, eq } from "drizzle-orm";
 
 /**
- * Mobile Journey Intelligence (slice 14) — friction heatmaps, journey scores
+ * Mobile Journey Intelligence (implementation) — friction heatmaps, journey scores
  * and revenue dimension cuts over the mobile SDK traffic. Project-scoped,
  * aggregate/masked data only. ClickHouse being unavailable yields empty
  * arrays (honest empty state), never a thrown page.
@@ -127,7 +127,7 @@ export async function gatherMobile(
 
   const covered = (path: string) => targets.includes("*") || targets.some((t) => path.includes(t));
   // At-risk money per screen: non-converted ended sessions × AOV (same honesty
-  // rules as slice 13 — AOV unset ⇒ 0, the UI shows a prompt instead).
+  // rules as implementation — AOV unset ⇒ 0, the UI shows a prompt instead).
   const endedByPath = new Map(abandonment.map((a) => [a.path, Number(a.ended)]));
 
   return {

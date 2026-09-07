@@ -5,7 +5,7 @@ import { getTranslations } from "next-intl/server";
 const CHANNELS = ["url", "faq", "chat", "whatsapp"] as const;
 
 /**
- * Slice 12 — Outcomes: per action, sessions that struggled before seeing it and
+ * implementation — Outcomes: per action, sessions that struggled before seeing it and
  * how many recovered (no further struggle, or the goal fired), plus the channel
  * split of clicks. Correlation, not causation — labeled honestly in the caption.
  */

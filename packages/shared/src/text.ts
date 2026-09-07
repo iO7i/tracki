@@ -33,7 +33,7 @@ export function searchTokens(query: string): string[] {
 
 /**
  * Single source of truth for FAQ relevance ranking (Audit M1) — used by the
- * help center, the snippet widget's manifest, and slice-5 retrieval. Title
+ * help center, the snippet widget's manifest, and implementation retrieval. Title
  * matches are boosted; body matches counted by frequency. The title is
  * normalized internally so the boost works for diacritic-bearing titles.
  * `searchText` must already be normalized (it is built with normalizeText).

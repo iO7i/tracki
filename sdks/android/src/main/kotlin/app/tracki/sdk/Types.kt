@@ -171,7 +171,7 @@ data class ActionIntent(
     val dismiss: () -> Unit,
 ) : RenderIntent
 
-/** Server-driven Live Assist for a detected struggle (slice 5 mechanism). */
+/** Server-driven Live Assist for a detected struggle (implementation mechanism). */
 data class AssistIntent(
     val actionId: String,
     val mode: String, // "answer" | "fallback"

@@ -232,7 +232,7 @@ public final class ActionEngine: @unchecked Sendable {
             dismiss: { [weak self] in self?.emit("action_dismiss", a.id, variant) }
         )
         // A failed render MUST NOT count: no impression, no cap bump, no goal
-        // arm (slice-3 M1 parity). The plain Renderer can't throw, so a renderer
+        // arm (implementation M1 parity). The plain Renderer can't throw, so a renderer
         // that needs to reject a render adopts ThrowingRenderer and throws from
         // tryShow — we then skip everything below.
         if let throwing = renderer as? ThrowingRenderer {

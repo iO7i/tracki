@@ -1,7 +1,7 @@
 /**
  * PII masking utilities — cross-cutting rule: PII never reaches analytics
- * storage or logs unmasked. Slice 0 ships email + phone masking (incl. the
- * Gulf/Egypt formats Tracki targets); slice-11 hardening adds payment-card
+ * storage or logs unmasked. implementation ships email + phone masking (incl. the
+ * Gulf/Egypt formats Tracki targets); implementation hardening adds payment-card
  * (Luhn-validated PAN) and secret-token (JWT / long hex) masking, since the
  * rich struggle `element` signature now surfaces DOM id/class values
  * prominently in the dashboard. NER-based name masking remains deferred.

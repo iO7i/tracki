@@ -1,4 +1,4 @@
-// Integration check for slice 2: seeds a project, sends event batches that
+// Integration check for implementation: seeds a project, sends event batches that
 // should trigger each struggle type, waits for the worker+detector, then asserts
 // ClickHouse `struggles` has the expected types/severities. Also checks segment
 // evaluation. Requires the stack + ingest running.
@@ -46,7 +46,7 @@ async function main() {
     events: [0, 300, 600].map((d) => ({ type: "click", ts: base + d, path: "/p", props: { tag: "button", id: "buy", class: "cta" } })),
   });
 
-  // Dead-clicker (slice 11): 3 fast clicks on a NON-interactive element → dead_click.
+  // Dead-clicker (implementation): 3 fast clicks on a NON-interactive element → dead_click.
   await post({
     key,
     anonId: "anon_dead",
@@ -60,7 +60,7 @@ async function main() {
     })),
   });
 
-  // Re-submitter (slice 11): same form submitted twice within the window.
+  // Re-submitter (implementation): same form submitted twice within the window.
   await post({
     key,
     anonId: "anon_sub",
@@ -104,7 +104,7 @@ async function main() {
   if (!ab) fail("form_abandon not detected");
   else if (ab.severity !== "high") fail(`form_abandon severity ${ab.severity}, expected high`);
 
-  // Slice 11: element + numeric score recorded.
+  // implementation: element + numeric score recorded.
   const rage = rows.find((r) => r.type === "rage_click");
   if (rage && (rage.element !== "button|buy|cta" || Number(rage.score) <= 0))
     fail(`rage element/score missing: ${rage.element} / ${rage.score}`);

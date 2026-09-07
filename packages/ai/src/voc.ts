@@ -2,7 +2,7 @@ import { searchTokens } from "@tracki/shared";
 import { type LLMClient, STOPWORDS, getLLM } from "./llm";
 
 /**
- * Voice of Customer (slice 8) — descriptive analytics over what customers
+ * Voice of Customer (implementation) — descriptive analytics over what customers
  * actually said. This is NOT answer generation: it never fabricates a reply, it
  * only clusters and ranks already-captured (PII-masked) customer language. The
  * heuristic path is deterministic and offline; Claude (when keyed) only relabels

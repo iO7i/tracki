@@ -1,7 +1,7 @@
 import { clampScore } from "./struggles";
 
 /**
- * Mobile Journey Score (slice 14) — a 0–100 per-session health score.
+ * Mobile Journey Score (implementation) — a 0–100 per-session health score.
  *
  * Deterministic and explainable, NOT a trained model: it folds the session's
  * measured friction (summed struggle scores), funnel abandonment and completion

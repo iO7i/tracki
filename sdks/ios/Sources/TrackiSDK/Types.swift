@@ -211,7 +211,7 @@ public struct ActionIntent {
     public var dismiss: () -> Void
 }
 
-/// Server-driven Live Assist for a detected struggle (slice 5 mechanism).
+/// Server-driven Live Assist for a detected struggle (implementation mechanism).
 public struct AssistIntent {
     public let intent = "assist"
     public var actionId: String

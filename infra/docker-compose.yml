@@ -17,7 +17,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # Idle until slice 1 (event analytics) — included for dev-environment parity.
+  # Idle until implementation (event analytics) — included for dev-environment parity.
   clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
     ports:
@@ -41,7 +41,7 @@ services:
     volumes:
       - redisdata:/data
 
-  # Idle until slice 1 (object storage parity for prod S3).
+  # Idle until implementation (object storage parity for prod S3).
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9101"

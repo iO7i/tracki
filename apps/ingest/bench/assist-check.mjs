@@ -1,4 +1,4 @@
-// Integration check for slice 5: a server-detected struggle (form_abandon —
+// Integration check for implementation: a server-detected struggle (form_abandon —
 // NOT client rage) arms a Live Assist returned on the next event flush, with a
 // grounded matched FAQ; a context with no matching FAQ falls back; struggle
 // actions are excluded from the client manifest.

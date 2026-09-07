@@ -1,4 +1,4 @@
-// Slice 14 Mobile Journey Intelligence e2e over the REAL stack — drives the
+// implementation Mobile Journey Intelligence e2e over the REAL stack — drives the
 // actual @tracki/mobile-core SDK engine (the protocol reference every native
 // SDK mirrors) against the running ingest service, then asserts ClickHouse:
 //   1) mobile events land with device context (platform/app_version/model)

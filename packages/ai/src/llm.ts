@@ -19,7 +19,7 @@ export interface ArticleDraft {
   bodyEn: string;
 }
 
-/** Bilingual action copy drafted by Autopilot (slice 12) — words only; the
+/** Bilingual action copy drafted by Autopilot (implementation) — words only; the
  * targeting/trigger/channel are decided in code, never by the model. */
 export interface ActionCopyDraft {
   name: string;
@@ -52,20 +52,20 @@ export interface LLMClient {
   /** Grounded conversational reply over candidate help articles. */
   chat(input: ChatGroundInput): Promise<ChatResult>;
   /**
-   * Optional (VoC, slice 8): relabel pre-formed topic clusters. Returns one
+   * Optional (VoC, implementation): relabel pre-formed topic clusters. Returns one
    * label per input cluster, in order. Only the semantic providers implement
    * it; the heuristic omits it and callers fall back to seed labels.
    */
   labelThemes?(input: ThemeLabelInput): Promise<{ label: string }[]>;
   /**
-   * Optional (Knowledge Hub, slice 9): draft a bilingual FAQ from a recurring
+   * Optional (Knowledge Hub, implementation): draft a bilingual FAQ from a recurring
    * question. Only semantic providers implement it; the heuristic omits it and
    * callers fall back to a clearly-marked review stub. Output is ALWAYS a
    * proposal for human approval — never published directly.
    */
   draftArticle?(input: DraftArticleInput): Promise<ArticleDraft>;
   /**
-   * Optional (Action Studio, slice 12): draft the bilingual COPY of a support
+   * Optional (Action Studio, implementation): draft the bilingual COPY of a support
    * action from a friction seed. Only semantic providers implement it; the
    * heuristic omits it and callers fall back to deterministic GCC playbook
    * templates. Output is ALWAYS a proposal for human approval.
@@ -88,7 +88,7 @@ export const CHAT_MIN_CONFIDENCE = 0.6;
 // Common stopwords dropped from the heuristic overlap denominator so a natural
 // question ("how do I pay") isn't diluted by function words. (Heuristic path
 // only; the safety guards — grounding flag, candidate membership, floor — are
-// unchanged.) Also reused by VoC theming (slice 8) to seed topics from content
+// unchanged.) Also reused by VoC theming (implementation) to seed topics from content
 // words rather than function words.
 export const STOPWORDS = new Set([
   "how",

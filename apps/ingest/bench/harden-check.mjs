@@ -1,4 +1,4 @@
-// Slice-11 hardening integration check: sends rage clicks whose element id
+// implementation hardening integration check: sends rage clicks whose element id
 // carries PII (email + a Luhn-valid PAN) and an oversized/bidi id, then asserts
 // the stored struggle `element` is masked, length-bounded, and control-clean.
 // Requires the stack + ingest running. Run: node bench/harden-check.mjs

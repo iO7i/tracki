@@ -64,7 +64,7 @@ describe("rage_click", () => {
   });
 });
 
-describe("dead_click (slice 11)", () => {
+describe("dead_click (implementation)", () => {
   const deadProps = JSON.stringify({ tag: "div", class: "fake-btn" });
   it("classifies a rapid cluster on a non-interactive element as dead_click, not rage", async () => {
     const store = new InMemoryStateStore();
@@ -77,7 +77,7 @@ describe("dead_click (slice 11)", () => {
   });
 });
 
-describe("repeated_submit (slice 11)", () => {
+describe("repeated_submit (implementation)", () => {
   it("fires on the 2nd submit of the same form within the window (high)", async () => {
     const store = new InMemoryStateStore();
     const base = 1_700_000_000_000;
@@ -91,7 +91,7 @@ describe("repeated_submit (slice 11)", () => {
   });
 });
 
-describe("score + element (slice 11)", () => {
+describe("score + element (implementation)", () => {
   it("rage carries an element signature and a 0–100 score with derived severity", async () => {
     const store = new InMemoryStateStore();
     const base = 1_700_000_000_000;
@@ -154,7 +154,7 @@ describe("PII safety", () => {
   });
 });
 
-// ── Mobile rules (slice 14) ────────────────────────────────────────────────
+// ── Mobile rules (implementation) ────────────────────────────────────────────────
 
 const mob = { platform: "ios", app_version: "2.1.0" };
 

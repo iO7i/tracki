@@ -10,7 +10,7 @@ function scoreTone(score: number): string {
 }
 
 /**
- * Mobile journey scores (slice 14): every recent session gets a deterministic
+ * Mobile journey scores (implementation): every recent session gets a deterministic
  * 0–100 health score derived from measured friction + funnel signals — a
  * heuristic estimate, labeled as such, never a fabricated "prediction".
  */

@@ -1,4 +1,4 @@
-// Slice 7 WhatsApp bridge e2e: handoff mints an inquiry code + context; a
+// implementation WhatsApp bridge e2e: handoff mints an inquiry code + context; a
 // simulated inbound carrying the code links the context, Agent first-responds
 // grounded; PII masked at rest; contact stored; takeover stops auto-reply.
 import postgres from "postgres";

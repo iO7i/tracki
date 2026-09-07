@@ -2,8 +2,8 @@ import { PageHeader } from "@/components/page-header";
 import { ProjectTabs } from "@/components/project-tabs";
 import { db } from "@/db";
 import { projects } from "@/db/schema";
-import { gatherVertexFunnel } from "@/lib/vertex";
 import { requireMembership } from "@/lib/tenancy";
+import { gatherVertexFunnel } from "@/lib/vertex";
 import { Card, CardContent, CardHeader, CardTitle } from "@tracki/ui";
 import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
@@ -38,7 +38,11 @@ export default async function VertexPage({
         <p className="text-sm text-zinc-500 dark:text-zinc-400">{t("noProjects")}</p>
       ) : (
         <>
-          <ProjectTabs items={orgProjects} activeSlug={active?.slug} basePath={`/orgs/${orgSlug}/vertex`} />
+          <ProjectTabs
+            items={orgProjects}
+            activeSlug={active?.slug}
+            basePath={`/orgs/${orgSlug}/vertex`}
+          />
 
           {active && view ? (
             <>

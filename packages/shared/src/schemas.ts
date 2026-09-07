@@ -3,7 +3,7 @@ import { ORG_ROLES } from "./constants";
 
 /**
  * Input contracts shared between the dashboard server actions today and the
- * public API once it is extracted in slice 1. Error messages are i18n keys —
+ * public API once it is extracted in implementation. Error messages are i18n keys —
  * the UI translates them; nothing user-facing is hardcoded here.
  */
 

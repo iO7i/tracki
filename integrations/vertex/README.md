@@ -1,6 +1,6 @@
-# Vertex ⇄ Tracki integration
+# application ⇄ Tracki integration
 
-Drop-in behavioral analytics for **tryvertex.io**, wired to the Tracki web stack.
+Drop-in behavioral analytics for **example.com**, wired to the Tracki web stack.
 Fires a typed, first-class event schema (no generic click capture), gates on
 consent, feature-flags autonomous AI chat OFF, and never sends PII.
 
@@ -8,12 +8,12 @@ consent, feature-flags autonomous AI chat OFF, and never sends PII.
 
 | File | Purpose |
 |------|---------|
-| `vertex-analytics.ts` | The typed client. Import it in the Vertex app (Next.js/TS). |
+| `vertex-analytics.ts` | The typed client. Import it in the application app (Next.js/TS). |
 | `example.html` | Zero-build static harness — the acceptance-test driver. |
 
 ## Install
 
-### Next.js (App Router — how tryvertex.io ships)
+### Next.js (App Router — how example.com ships)
 
 1. Copy `vertex-analytics.ts` into `apps/web/src/lib/`.
 2. Create a client provider that boots it once and fires page-level events:
@@ -28,7 +28,7 @@ export function VertexAnalyticsProvider() {
   useEffect(() => {
     VertexAnalytics.init({
       key: process.env.NEXT_PUBLIC_TRACKI_KEY!,
-      endpoint: process.env.NEXT_PUBLIC_TRACKI_ENDPOINT!, // https://ingest.tryvertex.io/v1/events
+      endpoint: process.env.NEXT_PUBLIC_TRACKI_ENDPOINT!, // https://ingest.example.com/v1/events
       consent: "pending", // opt-in; call consent(true) from your banner
     });
     VertexAnalytics.landingViewed();
@@ -74,8 +74,8 @@ switch). Everything else is wired at the interaction that means it:
 | `subscription_started` / `subscription_cancelled` | billing webhooks / UI |
 
 > Product/activation events (`first_sync_completed`, `first_profit_report_viewed`,
-> `subscription_*`) fire **inside the Vertex product**, not the marketing site.
-> Vertex remains the source of truth for authenticated product/billing/revenue;
+> `subscription_*`) fire **inside the application product**, not the marketing site.
+> application remains the source of truth for authenticated product/billing/revenue;
 > Tracki owns behavioral + struggle detail. Call these from the product app (or a
 > server→browser bridge) using the same client + the same project key.
 
@@ -102,7 +102,7 @@ contract. Email is never an identifier.
 ## Acceptance harness
 
 ```bash
-# with the local stack up + Vertex tenant seeded (prints the pk_ key):
+# with the local stack up + application tenant seeded (prints the pk_ key):
 open integrations/vertex/example.html?key=pk_...&endpoint=http://localhost:4000/v1/events
 ```
 

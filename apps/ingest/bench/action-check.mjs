@@ -1,4 +1,4 @@
-// Integration check for slice 3: seeds a live A/B popup, verifies the manifest
+// Integration check for implementation: seeds a live A/B popup, verifies the manifest
 // endpoint serves it (client fields only, no schedule), sends impression/click
 // tracking events, and asserts the actionResults query reports them.
 import { createClient } from "@clickhouse/client";

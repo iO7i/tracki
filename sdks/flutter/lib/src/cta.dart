@@ -6,7 +6,7 @@ import 'types.dart';
 /// Effective channel kind.
 enum CtaKind { url, faq, chat, whatsapp }
 
-/// Effective channel, tolerating pre-slice-12 shapes (faq boolean / url-only).
+/// Effective channel, tolerating pre-implementation shapes (faq boolean / url-only).
 CtaKind ctaKind(CtaContent cta) {
   switch (cta.kind) {
     case 'faq':
@@ -31,7 +31,7 @@ abstract class IdentityView {
 final _httpUrl = RegExp(r'^https?://', caseSensitive: false);
 final _httpsUrl = RegExp(r'^https://', caseSensitive: false);
 
-/// Channel router (slice 12 "right channeling", mobile edition): a CTA opens a
+/// Channel router (implementation "right channeling", mobile edition): a CTA opens a
 /// URL, the FAQ help center, the grounded Agent chat, or a WhatsApp handoff —
 /// all against the existing public APIs. Fail-silent throughout.
 class CtaRouter {
@@ -125,7 +125,7 @@ class CtaRouter {
     }));
   }
 
-  /// Mint a slice-7 handoff and open the wa.me deep link (the ME killer flow).
+  /// Mint a implementation handoff and open the wa.me deep link (the ME killer flow).
   void openWhatsApp() {
     transport.post('$endpoint/v1/handoff', <String, Object?>{
       'key': key,

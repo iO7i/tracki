@@ -1,4 +1,4 @@
-// Slice 9 Knowledge Hub e2e: a recurring unanswered question (no-result search
+// implementation Knowledge Hub e2e: a recurring unanswered question (no-result search
 // seen >=3x) → AI draft → pending proposal → approve → published FAQ → the Agent
 // now answers it grounded+cited. Plus dedup and tenancy. Mirrors the dashboard's
 // generateProposals/approveProposalAction logic over the real stores.

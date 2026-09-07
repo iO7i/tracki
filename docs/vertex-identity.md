@@ -1,6 +1,6 @@
-# Vertex identity progression
+# application identity progression
 
-Durable, privacy-safe identity ladder for the tryvertex.io tenant. **Email is never
+Durable, privacy-safe identity ladder for the example.com tenant. **Email is never
 an analytics identifier.** Every ID below is an opaque first-party surrogate.
 
 ```
@@ -12,15 +12,15 @@ anonymous_visitor_id → lead_id → user_id → organization_id → store_id
 | Rung | Source | Carried into Tracki as | Established on |
 |------|--------|------------------------|----------------|
 | `anonymous_visitor_id` | Tracki snippet (`anon_*`, first-party cookie/localStorage) | batch envelope `anonId` | first page view |
-| `lead_id` | Vertex CRM | event prop `leadId` | `booking_started` / `booking_completed` |
-| `user_id` | Vertex auth | `tracki.identify(userId)` **+** event prop `userId` | `signup_completed` / `booking_completed` (a real first-party conversion) |
-| `organization_id` | Vertex platform | event prop `orgId` | post-signup (`trial_started`, `store_connected`, …) |
+| `lead_id` | application CRM | event prop `leadId` | `booking_started` / `booking_completed` |
+| `user_id` | application auth | `tracki.identify(userId)` **+** event prop `userId` | `signup_completed` / `booking_completed` (a real first-party conversion) |
+| `organization_id` | application platform | event prop `orgId` | post-signup (`trial_started`, `store_connected`, …) |
 | `store_id` | Zid/Salla connection | event prop `storeId` | `store_connected` onward |
 
 ## The merge rule
 
 The **anon → user merge** is the only identity write Tracki performs. It happens
-exclusively when Vertex calls `tracki.identify(userId, …)`, which the client does
+exclusively when application calls `tracki.identify(userId, …)`, which the client does
 **only on a legitimate first-party conversion** — `booking_completed`,
 `signup_completed`, or authenticated account creation. Never on anonymous
 browsing, and never with an email.
@@ -42,7 +42,7 @@ identity graph a simple anon↔user mapping while still answering
 
 ## Privacy guarantees
 
-- `userId` passed to `identify` is Vertex's opaque UUID — if an email is ever
+- `userId` passed to `identify` is application's opaque UUID — if an email is ever
   passed by mistake, the ingestion edge masks it (`sanitizeVertexTrack` +
   `maskPii`) before storage.
 - No raw email/phone/name/token/order data is ever a prop (dropped by the

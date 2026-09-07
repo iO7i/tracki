@@ -51,7 +51,7 @@ export default async function ActionsPage({
     : [];
   const canManage = MANAGER_ROLES.includes(role);
 
-  // Slice 12 — Autopilot queue + edit-in-place (the edited action is loaded
+  // implementation — Autopilot queue + edit-in-place (the edited action is loaded
   // project-scoped; a foreign/invalid id silently falls back to create mode).
   const proposals = active ? await gatherActionProposals(active.id) : [];
   let editing: BuilderInitial | undefined;
@@ -92,7 +92,7 @@ export default async function ActionsPage({
 
           {active && (
             <>
-              {/* Slice 12 — Tracki Autopilot: AI-proposed actions from the friction report. */}
+              {/* implementation — Tracki Autopilot: AI-proposed actions from the friction report. */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>{t("autopilotTitle")}</CardTitle>
@@ -198,7 +198,7 @@ export default async function ActionsPage({
                 </CardContent>
               </Card>
 
-              {/* Slice 12 — Outcomes: recovery of struggling sessions + channel split. */}
+              {/* implementation — Outcomes: recovery of struggling sessions + channel split. */}
               <Card>
                 <CardHeader>
                   <CardTitle>{t("outcomesTitle")}</CardTitle>

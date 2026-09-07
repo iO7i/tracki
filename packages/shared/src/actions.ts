@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { STRUGGLE_TYPES } from "./struggles";
 
-// Slice 14: tour (guided steps) + drawer (contextual help) are mobile-only —
+// implementation: tour (guided steps) + drawer (contextual help) are mobile-only —
 // the web snippet has no renderer for them (enforced in the schema below).
 export const ACTION_TYPES = ["popup", "banner", "tooltip", "tour", "drawer"] as const;
 export type ActionType = (typeof ACTION_TYPES)[number];
 
-/** Where an action renders (slice 14). Default "all"; tour/drawer force "mobile". */
+/** Where an action renders (implementation). Default "all"; tour/drawer force "mobile". */
 export const ACTION_SURFACES = ["all", "web", "mobile"] as const;
 export type ActionSurface = (typeof ACTION_SURFACES)[number];
 
@@ -18,7 +18,7 @@ export const ACTION_TRIGGERS = [
   "exit_intent",
   "rage_click",
   "event",
-  // Slice 5: server-driven Live Assist on a detected struggle.
+  // implementation: server-driven Live Assist on a detected struggle.
   "struggle",
 ] as const;
 export type ActionTrigger = (typeof ACTION_TRIGGERS)[number];
@@ -36,14 +36,14 @@ export const ACTION_EVENT_TYPES = [
 
 const text = z.string().max(500);
 
-// Slice 12: "right channeling" — a CTA routes to a channel, not just a URL.
+// implementation: "right channeling" — a CTA routes to a channel, not just a URL.
 export const CTA_KINDS = ["url", "faq", "chat", "whatsapp"] as const;
 export type CtaKind = (typeof CTA_KINDS)[number];
 
 const ctaObjectSchema = z
   .object({
     label: z.string().min(1).max(80),
-    // Slice 12: explicit channel. Optional for back-compat — see resolveCtaKind.
+    // implementation: explicit channel. Optional for back-compat — see resolveCtaKind.
     kind: z.enum(CTA_KINDS).optional(),
     // http(s) only — rendered as an anchor on visitor browsers (XSS guard).
     url: z
@@ -52,7 +52,7 @@ const ctaObjectSchema = z
       .max(2048)
       .refine((u) => /^https?:\/\//i.test(u), "errors.invalidUrl")
       .optional(),
-    // Slice 4 (legacy): open the FAQ widget instead of navigating.
+    // implementation (legacy): open the FAQ widget instead of navigating.
     faq: z.boolean().optional(),
   })
   .refine(
@@ -64,7 +64,7 @@ export type ActionCta = z.infer<typeof ctaObjectSchema>;
 const ctaSchema = ctaObjectSchema.optional();
 
 /**
- * Effective channel of a CTA, tolerating pre-slice-12 definitions
+ * Effective channel of a CTA, tolerating pre-implementation definitions
  * (`faq: true` or url-only, with no `kind`).
  */
 export function resolveCtaKind(cta: { kind?: CtaKind; faq?: boolean; url?: string }): CtaKind {
@@ -91,7 +91,7 @@ const triggerSchema = z.object({
   eventName: z.string().min(1).max(80).optional(),
 });
 
-// Slice 14: guided-tour steps — bilingual, optionally anchored to a screen/element key.
+// implementation: guided-tour steps — bilingual, optionally anchored to a screen/element key.
 const tourStepSchema = z.object({
   ar: z.object({ title: text, body: text }),
   en: z.object({ title: text, body: text }),
@@ -109,13 +109,13 @@ export const actionDefinitionSchema = z
     frequencyCap: z.number().int().min(1).max(100).optional(),
     goalEvent: z.string().min(1).max(80).optional(),
     anchorSelector: z.string().max(200).optional(),
-    // Slice 14 — render surface; absent (pre-slice-14 definitions) ⇒ "all".
+    // implementation — render surface; absent (pre-implementation definitions) ⇒ "all".
     surface: z.enum(ACTION_SURFACES).optional(),
-    // Slice 14 — guided tour steps (type="tour" only).
+    // implementation — guided tour steps (type="tour" only).
     steps: z.array(tourStepSchema).min(1).max(10).optional(),
-    // Slice 5 — Live Assist (server-driven, trigger="struggle"):
+    // implementation — Live Assist (server-driven, trigger="struggle"):
     struggleTypes: z.array(z.enum(STRUGGLE_TYPES)).max(15).optional(),
-    // Slice 5 (S2) — deliver only to visitors matching this saved segment.
+    // implementation (S2) — deliver only to visitors matching this saved segment.
     segmentId: z.string().uuid().optional(),
     schedule: z
       .object({
@@ -135,7 +135,7 @@ export const actionDefinitionSchema = z
   });
 export type ActionDefinition = z.infer<typeof actionDefinitionSchema>;
 
-/** Effective render surface, tolerating pre-slice-14 definitions (no `surface`). */
+/** Effective render surface, tolerating pre-implementation definitions (no `surface`). */
 export function resolveSurface(d: { surface?: ActionSurface }): ActionSurface {
   return d.surface ?? "all";
 }
@@ -158,11 +158,11 @@ export interface ActionManifestEntry extends ActionDefinition {
   id: string;
 }
 
-/** Live Assist payload returned in the /v1/events response (slice 5). */
+/** Live Assist payload returned in the /v1/events response (implementation). */
 export interface AssistContent {
   title: string;
   body: string;
-  // Audit 12 M2: `kind` flows through at runtime (slice-12 channel CTAs on Live
+  // Audit 12 M2: `kind` flows through at runtime (implementation channel CTAs on Live
   // Assist actions); declare it so the compiler enforces the serialization path.
   cta?: { label: string; url?: string; faq?: boolean; kind?: CtaKind };
 }
@@ -178,7 +178,7 @@ export interface AssistPayload {
 }
 
 /**
- * Screens covered by live actions on the MOBILE surface (slice-14 audit M1+M3).
+ * Screens covered by live actions on the MOBILE surface (implementation audit M1+M3).
  * Returns substring targets; "*" = everything. Rules:
  * - Web-only actions cover nothing on mobile (the manifest never delivers them).
  * - Only a struggle-trigger (Live Assist) action with no urlContains covers all
@@ -219,7 +219,7 @@ export function isInSchedule(schedule: ActionDefinition["schedule"], now: number
   return true;
 }
 
-// --- Slice 12: Autopilot action proposals ---
+// --- implementation: Autopilot action proposals ---
 
 /**
  * Why Autopilot proposed an action — masked/aggregate data only (paths are
@@ -230,7 +230,7 @@ export interface ActionProposalEvidence {
   struggleType: string;
   /** Struggle occurrences behind this seed (window: last 30 days). */
   count: number;
-  /** Summed 0–100 friction score for the path (slice 11). */
+  /** Summed 0–100 friction score for the path (implementation). */
   score: number;
   /** Dominant element signature, when the struggle is element-bound. */
   element?: string;
@@ -252,7 +252,7 @@ export type ActionProposalDraft = z.infer<typeof actionProposalDraftSchema>;
 export const ACTION_PROPOSAL_STATUSES = ["pending", "approved", "rejected"] as const;
 export type ActionProposalStatus = (typeof ACTION_PROPOSAL_STATUSES)[number];
 
-/** Stable dedup key so regeneration never duplicates a seen seed (slice-9 pattern). */
+/** Stable dedup key so regeneration never duplicates a seen seed (implementation pattern). */
 export function proposalSeedKey(path: string, struggleType: string): string {
   return `${path}|${struggleType}`;
 }

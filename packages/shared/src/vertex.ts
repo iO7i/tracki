@@ -177,7 +177,10 @@ export function sanitizeVertexTrack(
   }
 
   // Coerce categorical props to their closed sets.
-  if ("platformInterest" in out && !PLATFORM_INTEREST.includes(out.platformInterest as PlatformInterest)) {
+  if (
+    "platformInterest" in out &&
+    !PLATFORM_INTEREST.includes(out.platformInterest as PlatformInterest)
+  ) {
     out.platformInterest = "unknown";
   }
   if ("deviceClass" in out && !DEVICE_CLASSES.includes(out.deviceClass as DeviceClass)) {
@@ -199,12 +202,19 @@ export function sanitizeVertexTrack(
  * so the client and any server-side derivation can't drift. Takes the referrer
  * HOST only (never the full URL) plus whether a paid click id was present.
  */
-export function classifyReferrer(referrerHost: string | undefined, hasClickId: boolean): ReferrerCategory {
+export function classifyReferrer(
+  referrerHost: string | undefined,
+  hasClickId: boolean,
+): ReferrerCategory {
   if (hasClickId) return "ads";
   const h = (referrerHost ?? "").toLowerCase();
   if (!h) return "direct";
   if (/(^|\.)(google|bing|yahoo|duckduckgo|yandex)\./.test(h)) return "search";
-  if (/(^|\.)(facebook|instagram|twitter|x|t|linkedin|tiktok|snapchat|youtube|reddit|whatsapp)\./.test(h))
+  if (
+    /(^|\.)(facebook|instagram|twitter|x|t|linkedin|tiktok|snapchat|youtube|reddit|whatsapp)\./.test(
+      h,
+    )
+  )
     return "social";
   if (/(^|\.)(tryvertex\.io)$/.test(h)) return "internal";
   return "referral";

@@ -68,7 +68,7 @@ export default async function VisitorPage({
     }
   }
 
-  // Slice 14: journey reconstruction — events grouped by session with a
+  // implementation: journey reconstruction — events grouped by session with a
   // per-session header (device, journey score, conversion). The conversion
   // event name comes from the project's revenue settings.
   const [projRow] = await db
@@ -154,7 +154,7 @@ export default async function VisitorPage({
                 const isMobile = info?.plat === "ios" || info?.plat === "android";
                 return (
                   <section key={g.sessionId} className="space-y-2">
-                    {/* Session header (slice 14 journey reconstruction). */}
+                    {/* Session header (implementation journey reconstruction). */}
                     <div className="flex flex-wrap items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-xs dark:bg-zinc-900/60">
                       <span className="font-semibold text-zinc-700 dark:text-zinc-200">
                         {t("session", { n: idx + 1 })}

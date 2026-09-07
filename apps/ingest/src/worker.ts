@@ -46,7 +46,7 @@ export function startWorker(): { stop: () => void } {
         pipe.publish(REDIS_KEYS.struggleChannel(s.project_id), JSON.stringify(s));
       }
       await pipe.exec();
-      // Slice 5 (S3): each struggle may arm a Live Assist for the session,
+      // implementation (S3): each struggle may arm a Live Assist for the session,
       // delivered on the visitor's next event flush. Off the ack path.
       for (const s of struggles) await computeAssist(ch, s);
     } catch (err) {

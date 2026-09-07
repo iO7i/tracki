@@ -77,10 +77,10 @@ export const projects = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
-    // Embedded in customer sites via the snippet tag (slice 1 consumes it).
+    // Embedded in customer sites via the snippet tag (implementation consumes it).
     publicKey: text("public_key").notNull().unique(),
     siteUrl: text("site_url"),
-    // Slice 13 — Revenue Impact: merchant-set inputs that turn measured friction
+    // implementation — Revenue Impact: merchant-set inputs that turn measured friction
     // into money. avgOrderValue is in major currency units; 0 ⇒ "set your AOV".
     currency: text("currency").notNull().default("SAR"),
     avgOrderValue: integer("avg_order_value").notNull().default(0),
@@ -91,7 +91,7 @@ export const projects = pgTable(
 );
 
 /**
- * Anon→user identity mapping (slice 1). Written by the ingest service on
+ * Anon→user identity mapping (implementation). Written by the ingest service on
  * `identify` events; read by the dashboard to merge a visitor's pre/post-login
  * timeline. One row per (project, anon_id).
  */
@@ -113,9 +113,9 @@ export const identities = pgTable(
 );
 
 /**
- * Saved audience segments (slice 2). `definition` is a SegmentDefinition
+ * Saved audience segments (implementation). `definition` is a SegmentDefinition
  * (validated by @tracki/shared Zod before write); evaluated against ClickHouse
- * to count matching visitors. Consumed by slice 3 to target actions.
+ * to count matching visitors. Consumed by implementation to target actions.
  */
 export const segments = pgTable(
   "segments",
@@ -132,7 +132,7 @@ export const segments = pgTable(
 );
 
 /**
- * No-code on-site actions (slice 3). `definition` is an ActionDefinition
+ * No-code on-site actions (implementation). `definition` is an ActionDefinition
  * (validated by @tracki/shared Zod before write). Live actions are served to
  * the snippet via the ingest manifest; tracking events flow back through CH.
  */
@@ -153,10 +153,10 @@ export const actions = pgTable(
 );
 
 /**
- * Bilingual FAQ / knowledge-base articles (slice 4). `search_text` is the
+ * Bilingual FAQ / knowledge-base articles (implementation). `search_text` is the
  * Arabic-normalized concatenation of all title/body/tags, built on write and
  * matched against the normalized query (lexical search). Consumed by the help
- * center, the snippet widget, and (slice 5) AI retrieval.
+ * center, the snippet widget, and (implementation) AI retrieval.
  */
 export const faqArticles = pgTable(
   "faq_articles",
@@ -184,7 +184,7 @@ export const faqArticles = pgTable(
 );
 
 /**
- * Tracki Agent conversations (slice 6). Messages stored PII-masked. `status`
+ * Tracki Agent conversations (implementation). Messages stored PII-masked. `status`
  * is the resolution tag (open / self_resolved / escalated / abandoned).
  */
 export const conversations = pgTable(
@@ -221,7 +221,7 @@ export const chatMessages = pgTable(
 );
 
 /**
- * Tracki Connect — WhatsApp bridge (slice 7). A `handoff` snapshots the
+ * Tracki Connect — WhatsApp bridge (implementation). A `handoff` snapshots the
  * visitor's web context under an inquiry code; the inbound WhatsApp message
  * carrying that code links to it so the customer never repeats themselves.
  */
@@ -302,12 +302,12 @@ export const demoRequests = pgTable(
 );
 
 /**
- * Tracki Autopilot (slice 12). Each row is an AI-drafted *action proposal*
- * generated from the friction report (slice-11 struggle data + VoC gaps). It is
+ * Tracki Autopilot (implementation). Each row is an AI-drafted *action proposal*
+ * generated from the friction report (implementation struggle data + VoC gaps). It is
  * NEVER auto-live: a manager approves (creating a *draft* action, linked via
  * `actionId` — the only path to `live` stays the manual toggle) or rejects.
  * `seedKey` is `path|struggleType` — unique per project so re-running
- * generation can't duplicate a seen seed (slice-9 pattern).
+ * generation can't duplicate a seen seed (implementation pattern).
  */
 export const actionProposals = pgTable(
   "action_proposals",
@@ -331,7 +331,7 @@ export const actionProposals = pgTable(
 );
 
 /**
- * Self-improving knowledge (slice 9). Each row is an AI-drafted FAQ *proposal*
+ * Self-improving knowledge (implementation). Each row is an AI-drafted FAQ *proposal*
  * generated from a recurring VoC gap (a question Tracki couldn't answer). It is
  * NEVER auto-published: a manager reviews/edits the bilingual `draft`, then
  * approves (creating a real faq_article, linked via `articleId`) or rejects.

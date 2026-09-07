@@ -13,14 +13,14 @@ import {
 import { type ActionCopyDraft, type LLMClient, getLLM } from "./llm";
 
 /**
- * Tracki Autopilot (slice 12) — the QANT Web "campaign auto-generation" loop:
+ * Tracki Autopilot (implementation) — the contextual campaign generation workflow:
  * read the friction report, draft targeted bilingual action PROPOSALS, and hand
  * them to a manager for review. Structure mirrors the VoC principle: the model
  * writes COPY only; seeds, ranking, targeting, trigger and channel are decided
  * deterministically in code from real data. Nothing here publishes anything.
  */
 
-/** One friction-report row feeding Autopilot (path-level, slice-11 data). */
+/** One friction-report row feeding Autopilot (path-level, implementation data). */
 export interface StudioFrictionRow {
   path: string;
   struggleType: string;
@@ -34,7 +34,7 @@ export interface StudioFrictionRow {
   platform?: string;
 }
 
-/** A recurring VoC gap question (slice 8) that can reinforce/ground a seed. */
+/** A recurring VoC gap question (implementation) that can reinforce/ground a seed. */
 export interface StudioGap {
   question: string;
   count: number;
@@ -235,7 +235,7 @@ const PLAYBOOK: Record<
       body: "If you can't easily find what you're looking for, just ask and we'll guide you right away.",
     },
   },
-  // Mobile (slice 14) — the same playbook discipline for in-app friction.
+  // Mobile (implementation) — the same playbook discipline for in-app friction.
   repeated_payment_failure: {
     name: "Rescue: payment failing",
     ar: {
@@ -366,7 +366,7 @@ function isEmptyCopy(d: ActionCopyDraft): boolean {
  * Build the full ready-to-edit action from a seed: copy from the model (or the
  * playbook), everything else from the evidence. rage_click targets the instant
  * client trigger; all other struggle types are delivered server-side via Live
- * Assist (slice 5). The definition always parses `actionDefinitionSchema`.
+ * Assist (implementation). The definition always parses `actionDefinitionSchema`.
  */
 export async function draftActionFromSeed(
   seed: ActionSeed,

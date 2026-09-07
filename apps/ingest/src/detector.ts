@@ -24,7 +24,7 @@ const THRASH_MIN = 6;
 const DEBOUNCE_MS = 60_000;
 const ERROR_FLAG_TTL_MS = 30 * 60_000; // session "has errored" memory
 
-// Mobile rule thresholds (slice 14).
+// Mobile rule thresholds (implementation).
 const OTP_WINDOW_MS = 5 * 60_000;
 const OTP_MIN = 2;
 const BIO_WINDOW_MS = 5 * 60_000;
@@ -44,7 +44,7 @@ const PERM_MIN = 2; // same permission
 const ONBOARDING_FLOWS = new Set(["onboarding", "registration"]);
 
 // Tags the snippet's click `closest()` resolves to — anything else the user
-// clicked is non-interactive (a dead click) (slice 11).
+// clicked is non-interactive (a dead click) (implementation).
 const INTERACTIVE = new Set([
   "a",
   "button",
@@ -55,7 +55,7 @@ const INTERACTIVE = new Set([
   "label",
   "summary",
 ]);
-// High-intent paths score higher — regex shared with Autopilot (slice 12).
+// High-intent paths score higher — regex shared with Autopilot (implementation).
 const HIGH_INTENT = HIGH_INTENT_PATH;
 
 function parseProps(props: string): {
@@ -63,7 +63,7 @@ function parseProps(props: string): {
   id?: string;
   class?: string;
   message?: string;
-  // Mobile (slice 14):
+  // Mobile (implementation):
   flow?: string;
   permission?: string;
   method?: string;
@@ -213,7 +213,7 @@ export async function detectBatch(
       }
     }
 
-    // ── Mobile rules (slice 14) — same windowing/debounce machinery ──────
+    // ── Mobile rules (implementation) — same windowing/debounce machinery ──────
 
     if (e.type === "otp_fail") {
       const count = await store.pushTimestamped(key(e, "otp"), t, OTP_WINDOW_MS);

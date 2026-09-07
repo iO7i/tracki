@@ -2,18 +2,18 @@ import { HIGH_INTENT_PATTERN, MONEY_STRUGGLE_TYPES } from "@tracki/shared";
 import type { ClickHouseClient } from "./client";
 
 /**
- * Mobile Journey Intelligence (slice 14) — screen heatmaps, per-session journey
+ * Mobile Journey Intelligence (implementation) — screen heatmaps, per-session journey
  * rollups and revenue dimension cuts. All reads are tenancy-scoped and fully
  * parameterized. Events live in a ReplacingMergeTree, so event counts always go
- * through uniqExact(event_id)-style aggregates (audit slice-2 B1).
+ * through uniqExact(event_id)-style aggregates (audit implementation B1).
  *
- * Platform semantics: '' = pre-slice-14 rows (web), 'web' = browser snippet,
+ * Platform semantics: '' = pre-implementation rows (web), 'web' = browser snippet,
  * 'ios'/'android' = mobile SDKs. "Mobile" filters use IN ('ios','android').
  */
 
 const MOBILE_PLATFORMS = ["ios", "android"];
 
-// Same conversion predicate as revenue.ts (slice 13).
+// Same conversion predicate as revenue.ts (implementation).
 const conversionPredicate =
   "( type = 'action_goal' OR (type = 'track' AND JSONExtractString(props, 'name') = {conv:String}) )";
 
@@ -235,7 +235,7 @@ export interface StruggleRecoveryRow {
 }
 
 /**
- * Revenue recovery cut by struggle type — sessionized like slice-13:
+ * Revenue recovery cut by struggle type — sessionized like implementation:
  * recovered = struggled → saw an action impression → converted (correlation,
  * labeled as such in the UI); at_risk = struggled, never converted.
  */

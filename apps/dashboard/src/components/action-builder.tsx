@@ -28,7 +28,7 @@ interface Localized {
 }
 const emptyLoc: Localized = { title: "", body: "", ctaLabel: "", ctaUrl: "" };
 
-/** Slice 12: the CTA routes to a channel — URL, FAQ widget, Agent chat, or WhatsApp. */
+/** implementation: the CTA routes to a channel — URL, FAQ widget, Agent chat, or WhatsApp. */
 function toContent(ar: Localized, en: Localized, kind: CtaKind) {
   const pack = (l: Localized) => {
     let cta: Record<string, unknown> | undefined;
@@ -42,7 +42,7 @@ function toContent(ar: Localized, en: Localized, kind: CtaKind) {
   return { ar: pack(ar), en: pack(en) };
 }
 
-/** An existing action loaded into the builder (slice 12 — edit-in-place). */
+/** An existing action loaded into the builder (implementation — edit-in-place). */
 export interface BuilderInitial {
   id: string;
   name: string;
@@ -84,7 +84,7 @@ export function ActionBuilder({
   const tStruggle = useTranslations("struggleTypes");
   const init = initial?.definition;
   const [type, setType] = useState<ActionType>(init?.type ?? "popup");
-  // Slice 14: render surface; tour/drawer are mobile-only (no web renderer).
+  // implementation: render surface; tour/drawer are mobile-only (no web renderer).
   const [surface, setSurface] = useState<ActionSurface>(init?.surface ?? "all");
   const [steps, setSteps] = useState<TourStep[]>(init?.steps ?? []);
   const mobileOnly = type === "tour" || type === "drawer";
@@ -212,7 +212,7 @@ export function ActionBuilder({
             </select>
           </div>
 
-          {/* Slice 14: where the action renders (web snippet / mobile SDKs). */}
+          {/* implementation: where the action renders (web snippet / mobile SDKs). */}
           <div className="space-y-1.5">
             <Label>{t("surfaceLabel")}</Label>
             <select
@@ -232,7 +232,7 @@ export function ActionBuilder({
             )}
           </div>
 
-          {/* Slice 14: guided-tour steps (bilingual, optional anchor key). */}
+          {/* implementation: guided-tour steps (bilingual, optional anchor key). */}
           {type === "tour" && (
             <div className="space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
               <div className="flex items-center justify-between">
@@ -338,7 +338,7 @@ export function ActionBuilder({
             <div dir="ltr">{locFields(en, setEn, "en")}</div>
           </div>
 
-          {/* Slice 12 — right channeling: where the CTA routes. */}
+          {/* implementation — right channeling: where the CTA routes. */}
           <div className="space-y-1.5">
             <Label>{t("ctaKindLabel")}</Label>
             <select

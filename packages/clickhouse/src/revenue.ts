@@ -2,7 +2,7 @@ import { HIGH_INTENT_PATTERN, MONEY_STRUGGLE_TYPES } from "@tracki/shared";
 import type { ClickHouseClient } from "./client";
 
 /**
- * Revenue Impact (slice 13) — sessionized money queries. "High-intent" uses the
+ * Revenue Impact (implementation) — sessionized money queries. "High-intent" uses the
  * SAME pattern as the detector/Autopilot (single-sourced from @tracki/shared),
  * passed as a query parameter so RE2 sees the real `\b` word boundaries (a SQL
  * string literal would eat the backslash). All reads are tenancy-scoped.
@@ -14,7 +14,7 @@ import type { ClickHouseClient } from "./client";
 const conversionPredicate =
   "( type = 'action_goal' OR (type = 'track' AND JSONExtractString(props, 'name') = {conv:String}) )";
 
-// Slice 14: a struggle counts as revenue-struggling when it happened on a
+// implementation: a struggle counts as revenue-struggling when it happened on a
 // high-intent path OR its type is inherently money-blocking (e.g. a repeated
 // payment failure on a mobile screen not named "checkout").
 const revenueStrugglePredicate =

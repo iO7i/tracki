@@ -57,7 +57,7 @@ export async function handleHandoff(
 /**
  * Process one inbound WhatsApp message for a resolved project: link any handoff
  * via the inquiry code, persist (PII-masked), and — unless a human has taken
- * over — send a grounded Agent reply. The Agent reuses the slice-6 no-fabricate
+ * over — send a grounded Agent reply. The Agent reuses the implementation no-fabricate
  * guarantee (out-of-scope ⇒ escalate, no invention).
  */
 export async function handleInbound(

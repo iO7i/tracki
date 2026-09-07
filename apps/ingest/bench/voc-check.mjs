@@ -1,4 +1,4 @@
-// Slice 8 VoC e2e: seeds chat (via /v1/chat, so masking is real), WhatsApp
+// implementation VoC e2e: seeds chat (via /v1/chat, so masking is real), WhatsApp
 // inbound, no-result FAQ searches and struggles for a project, then runs the
 // same gather the dashboard's lib/voc.ts runs (project-scoped queries + the
 // @tracki/ai clustering) and asserts: themes form, a known unanswered search

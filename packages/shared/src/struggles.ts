@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Detected stuck-states (slice 2 + rich detection slice 11 + mobile slice 14). */
+/** Detected stuck-states (implementation + rich detection implementation + mobile implementation). */
 export const STRUGGLE_TYPES = [
   "rage_click",
   "dead_click",
@@ -8,7 +8,7 @@ export const STRUGGLE_TYPES = [
   "repeated_submit",
   "form_abandon",
   "thrashing",
-  // Mobile (slice 14) — detected from mobile SDK events by the same engine.
+  // Mobile (implementation) — detected from mobile SDK events by the same engine.
   "repeated_payment_failure",
   "otp_failure_loop",
   "biometric_failure_loop",
@@ -21,7 +21,7 @@ export const STRUGGLE_TYPES = [
 ] as const;
 export type StruggleType = (typeof STRUGGLE_TYPES)[number];
 
-/** Mobile-only struggle types (slice 14) — subset of STRUGGLE_TYPES. */
+/** Mobile-only struggle types (implementation) — subset of STRUGGLE_TYPES. */
 export const MOBILE_STRUGGLE_TYPES = [
   "repeated_payment_failure",
   "otp_failure_loop",
@@ -38,7 +38,7 @@ export const STRUGGLE_SEVERITIES = ["low", "medium", "high"] as const;
 export type StruggleSeverity = (typeof STRUGGLE_SEVERITIES)[number];
 
 /**
- * Per-type base weight for the 0–100 severity score (slice 11). A frequency
+ * Per-type base weight for the 0–100 severity score (implementation). A frequency
  * bonus is added on top. Tuned so a fought form / repeated errors rank above a
  * single abandon, which ranks above generic thrashing.
  */
@@ -49,7 +49,7 @@ export const STRUGGLE_WEIGHTS: Record<StruggleType, number> = {
   dead_click: 40,
   rage_click: 35,
   thrashing: 25,
-  // Mobile (slice 14). Money- and auth-blocking loops rank highest: a user who
+  // Mobile (implementation). Money- and auth-blocking loops rank highest: a user who
   // can't pay or can't get in is the most expensive friction in the app.
   repeated_payment_failure: 80,
   otp_failure_loop: 75,
@@ -64,8 +64,8 @@ export const STRUGGLE_WEIGHTS: Record<StruggleType, number> = {
 
 /**
  * High-intent paths — a struggle on checkout/payment hurts more than on /about.
- * Used by the detector's score bonus (slice 11), Autopilot's channel suggestion
- * (slice 12), and Revenue Impact (slice 13). The pattern is single-sourced so
+ * Used by the detector's score bonus (implementation), Autopilot's channel suggestion
+ * (implementation), and Revenue Impact (implementation). The pattern is single-sourced so
  * the JS regex and the ClickHouse `match()` string can't drift apart.
  */
 export const HIGH_INTENT_PATTERN =
@@ -74,7 +74,7 @@ export const HIGH_INTENT_PATH = new RegExp(HIGH_INTENT_PATTERN, "i");
 
 /**
  * Struggle types that put revenue at risk REGARDLESS of screen/path name
- * (slice 14): a repeated payment failure is money friction even when the
+ * (implementation): a repeated payment failure is money friction even when the
  * mobile screen isn't named "checkout". Single-sourced so the revenue queries
  * and any UI copy can't drift. Deliberately conservative — OTP/biometric loops
  * also gate logins, so they stay path-dependent like every other type.
@@ -98,7 +98,7 @@ export function severityFromScore(score: number): StruggleSeverity {
 /**
  * Human, FAQ-vocabulary intent words for a struggle type — bilingual (en + ar)
  * so they can lexically overlap real help articles. Used as a GROUNDING SIGNAL
- * for contextual FAQ matching (slice 5): the raw type token (`otp_failure_loop`)
+ * for contextual FAQ matching (implementation): the raw type token (`otp_failure_loop`)
  * never appears in an FAQ, but "otp code رمز التحقق" does. Types with no clear
  * self-service intent (rage/dead click, thrashing, restart, back-nav) return ""
  * so they add no noise.
@@ -136,7 +136,7 @@ export interface StruggleDetection {
   event_count: number;
   /** 0–100 friction score; `severity` is derived from it. */
   score: number;
-  /** Device context of the triggering event (slice 14); '' for web rows. */
+  /** Device context of the triggering event (implementation); '' for web rows. */
   platform: string;
   app_version: string;
   ts: number;

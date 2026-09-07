@@ -1,3 +1,4 @@
+import { generatePublicKey, normalizeText } from "@tracki/shared";
 /**
  * Seed the Vertex production dogfooding tenant.
  *
@@ -14,9 +15,8 @@
  * postgres-js client from DATABASE_URL.
  */
 import bcrypt from "bcryptjs";
-import { generatePublicKey, normalizeText } from "@tracki/shared";
-import { drizzle } from "drizzle-orm/postgres-js";
 import { and, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
 
@@ -61,9 +61,7 @@ async function main() {
     .from(schema.memberships)
     .where(and(eq(schema.memberships.orgId, org.id), eq(schema.memberships.userId, user.id)));
   if (!membership) {
-    await db
-      .insert(schema.memberships)
-      .values({ orgId: org.id, userId: user.id, role: "owner" });
+    await db.insert(schema.memberships).values({ orgId: org.id, userId: user.id, role: "owner" });
   }
 
   // 4) project (tryvertex.io marketing) --------------------------------------
@@ -114,7 +112,9 @@ async function main() {
     const [exists] = await db
       .select()
       .from(schema.faqArticles)
-      .where(and(eq(schema.faqArticles.projectId, project.id), eq(schema.faqArticles.slug, a.slug)));
+      .where(
+        and(eq(schema.faqArticles.projectId, project.id), eq(schema.faqArticles.slug, a.slug)),
+      );
     if (exists) continue;
     await db.insert(schema.faqArticles).values({
       projectId: project.id,
@@ -137,7 +137,13 @@ async function main() {
       type: "banner",
       surface: "web",
       trigger: { kind: "struggle" },
-      struggleTypes: ["repeated_error", "repeated_submit", "form_abandon", "dead_click", "rage_click"],
+      struggleTypes: [
+        "repeated_error",
+        "repeated_submit",
+        "form_abandon",
+        "dead_click",
+        "rage_click",
+      ],
       frequencyCap: 3,
       content: {
         ar: {

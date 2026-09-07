@@ -14,7 +14,7 @@ export const RAGE_MIN_CLICKS = 3;
 // Bound each signature part and the whole, so a hostile client can't write a
 // multi-KB element string (props is byte-capped server-side, but the signature
 // itself was previously uncapped) and can't smuggle control/bidi chars that
-// bloat or visually spoof the dashboard table. (Slice-11 hardening F1/F2.)
+// bloat or visually spoof the dashboard table. (implementation hardening F1/F2.)
 const MAX_TAG = 32;
 const MAX_PART = 96;
 
@@ -42,7 +42,7 @@ function sanitize(s: string, max: number): string {
 /**
  * Bound + clean a free-form mobile signal label (flow name, permission,
  * payment method…) before it lands in a struggle row's `element` column —
- * same sanitization chokepoint as elementSignature (slice-11 F1/F2).
+ * same sanitization chokepoint as elementSignature (implementation F1/F2).
  */
 export function boundLabel(s: string): string {
   return sanitize(s, MAX_PART);

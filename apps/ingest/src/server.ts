@@ -92,7 +92,7 @@ export function buildServer(): FastifyInstance {
 
   // Action manifest for the snippet + mobile SDKs. Unknown key → empty array
   // (never leak key validity). Only live, in-schedule actions, client-facing
-  // fields only. Slice 14: one cached manifest, filtered per surface here —
+  // fields only. implementation: one cached manifest, filtered per surface here —
   // ?surface=mobile for the SDKs; anything else (incl. absent) ⇒ web, so the
   // web snippet never receives tour/drawer actions it can't render.
   app.get("/v1/actions", async (request, reply) => {
@@ -116,7 +116,7 @@ export function buildServer(): FastifyInstance {
     return reply.send({ articles });
   });
 
-  // Tracki Connect (slice 7): escalate → mint inquiry code + wa.me deep link.
+  // Tracki Connect (implementation): escalate → mint inquiry code + wa.me deep link.
   app.post("/v1/handoff", async (request, reply) => {
     const parsed = handoffRequestSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid" });
@@ -191,7 +191,7 @@ export function buildServer(): FastifyInstance {
     return reply.send({ ok: true });
   });
 
-  // Tracki Agent (slice 6): one grounded conversational turn.
+  // Tracki Agent (implementation): one grounded conversational turn.
   app.post("/v1/chat", async (request, reply) => {
     const parsed = chatRequestSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid" });
@@ -265,7 +265,7 @@ export function buildServer(): FastifyInstance {
       }
     }
 
-    // Slice 5: deliver any pending Live Assist for this session (pop-and-clear).
+    // implementation: deliver any pending Live Assist for this session (pop-and-clear).
     const assist = await popAssist(ref.projectId, batch.sessionId);
     return reply.code(202).send(assist ? { ok: true, assist } : { ok: true });
   });

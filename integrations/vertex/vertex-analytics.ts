@@ -85,7 +85,11 @@ function referrerCategory(): string {
   if (hasClickId) return "ads";
   if (!host) return "direct";
   if (/(^|\.)(google|bing|yahoo|duckduckgo|yandex)\./.test(host)) return "search";
-  if (/(^|\.)(facebook|instagram|twitter|x|linkedin|tiktok|snapchat|youtube|reddit|whatsapp)\./.test(host))
+  if (
+    /(^|\.)(facebook|instagram|twitter|x|linkedin|tiktok|snapchat|youtube|reddit|whatsapp)\./.test(
+      host,
+    )
+  )
     return "social";
   if (siteHost && (host === siteHost || host.endsWith(`.${siteHost}`))) return "internal";
   return "referral";
@@ -207,7 +211,8 @@ export const VertexAnalytics = {
 
   // platform choice + connection ----------------------------------------------
   platformSelected(platform: Platform): void {
-    platformInterest = platformInterest === "unknown" ? platform : platformInterest === platform ? platform : "both";
+    platformInterest =
+      platformInterest === "unknown" ? platform : platformInterest === platform ? platform : "both";
     emit("platform_selected", { platform });
   },
   zidSelected(): void {

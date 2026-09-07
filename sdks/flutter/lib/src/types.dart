@@ -209,7 +209,7 @@ class ActionIntent extends RenderIntent {
   });
 }
 
-/// Server-driven Live Assist for a detected struggle (slice 5 mechanism).
+/// Server-driven Live Assist for a detected struggle (implementation mechanism).
 class AssistIntent extends RenderIntent {
   final String actionId;
   final String mode; // "answer" | "fallback"

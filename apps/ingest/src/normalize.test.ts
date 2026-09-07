@@ -47,7 +47,7 @@ describe("normalizeBatch", () => {
     expect(e?.user_id).toBe("");
   });
 
-  // Slice 14 — mobile device context.
+  // implementation — mobile device context.
   it("stamps device context onto every row and builds a coarse app UA", () => {
     const mobile: EventBatch = {
       ...batch,

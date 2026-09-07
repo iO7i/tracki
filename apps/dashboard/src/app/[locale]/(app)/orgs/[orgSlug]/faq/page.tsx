@@ -22,7 +22,7 @@ export default async function FaqPage({
   const { org, role } = await requireMembership(locale, orgSlug);
   const { project: selectedSlug, draft } = await searchParams;
   const t = await getTranslations("faq");
-  // VoC "Draft FAQ" hand-off (slice 8): prefill the title in the question's language.
+  // VoC "Draft FAQ" hand-off (implementation): prefill the title in the question's language.
   const draftTitle = draft?.slice(0, 200);
   const draftIsArabic = draftTitle ? /[؀-ۿ]/.test(draftTitle) : false;
 

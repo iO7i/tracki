@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Revenue Impact (slice 13) — turn measured friction into money. Pure model +
+ * Revenue Impact (implementation) — turn measured friction into money. Pure model +
  * settings schema; the heavy lifting (sessionized counts) is in ClickHouse and
  * the merchant-set AOV/currency live on the project. No I/O here.
  */

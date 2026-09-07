@@ -54,7 +54,7 @@ export interface ThemeLabelInput {
 }
 
 /**
- * VoC theme relabeling (slice 8). Given deterministically-formed clusters (a
+ * VoC theme relabeling (implementation). Given deterministically-formed clusters (a
  * seed keyword + one real example each), produce a short human label per theme.
  * Pure relabeling — counts and membership stay tied to the real clusters, so the
  * model can't invent themes or numbers.
@@ -80,7 +80,7 @@ export interface DraftArticleInput {
 }
 
 /**
- * Draft a bilingual FAQ from a recurring unanswered question (slice 9). The
+ * Draft a bilingual FAQ from a recurring unanswered question (implementation). The
  * output is a PROPOSAL for human review — never auto-published. Stay close to
  * the provided snippets; when facts are missing, write a brief, honest
  * placeholder body rather than inventing specifics.
@@ -118,7 +118,7 @@ export interface DraftActionInput {
 }
 
 /**
- * Draft the COPY of a support action from a friction-report seed (slice 12 —
+ * Draft the COPY of a support action from a friction-report seed (implementation —
  * Autopilot). The model writes words only; targeting, trigger and channel are
  * decided deterministically in code from the evidence (mirrors the VoC
  * relabel-only principle: the model can't change what the data says). The

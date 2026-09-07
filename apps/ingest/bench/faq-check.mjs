@@ -1,4 +1,4 @@
-// Integration check for slice 4: seeds bilingual articles (one draft), verifies
+// Integration check for implementation: seeds bilingual articles (one draft), verifies
 // the /v1/faq endpoint serves published-only with Arabic-aware search (diacritic
 // + teh-marbuta variant matches), and that faq_* events land in ClickHouse.
 import { createClient } from "@clickhouse/client";

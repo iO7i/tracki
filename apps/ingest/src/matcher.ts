@@ -76,7 +76,7 @@ async function buildContext(
 
 /**
  * Find the best-grounded FAQ for a struggling visitor's context. Candidates come
- * from the slice-4 Arabic-aware search; grounding/confidence from packages/ai.
+ * from the implementation Arabic-aware search; grounding/confidence from packages/ai.
  * Returns an answer ONLY when grounded & confident — otherwise fallback.
  */
 export async function matchForContext(

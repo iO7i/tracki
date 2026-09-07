@@ -85,7 +85,7 @@ export default async function RevenuePage({
                 </CardContent>
               </Card>
 
-              {/* Slice 14: recovery cut by struggle type / device / app version. */}
+              {/* implementation: recovery cut by struggle type / device / app version. */}
               {mobileInsights &&
                 (mobileInsights.byStruggleType.length > 0 ||
                   mobileInsights.byPlatform.length > 0 ||

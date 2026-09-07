@@ -2,10 +2,10 @@ import type { MobileInsights } from "@/lib/mobile";
 import { getTranslations } from "next-intl/server";
 
 /**
- * Mobile friction heatmaps (slice 14): the screens hurting most (summed
+ * Mobile friction heatmaps (implementation): the screens hurting most (summed
  * friction score), the screens journeys die on, and the screens worth
  * intervening on first (at-risk money × no live action coverage). Money uses
- * the slice-13 honesty rules — AOV unset shows a prompt, never a number.
+ * the implementation honesty rules — AOV unset shows a prompt, never a number.
  */
 export async function MobileHeatmaps({
   insights,

@@ -1,6 +1,6 @@
 //
 //  Cta.swift
-//  Channel router (slice 12 "right channeling", mobile edition): a CTA opens a
+//  Channel router (implementation "right channeling", mobile edition): a CTA opens a
 //  URL, the FAQ help center, the grounded Agent chat, or a WhatsApp handoff —
 //  all against the existing public APIs. Fail-silent throughout.
 //
@@ -11,7 +11,7 @@ public enum CtaKind: String {
     case url, faq, chat, whatsapp
 }
 
-/// Effective channel, tolerating pre-slice-12 shapes (faq boolean / url-only).
+/// Effective channel, tolerating pre-implementation shapes (faq boolean / url-only).
 public func ctaKind(_ cta: CtaContent) -> CtaKind {
     switch cta.kind {
     case "faq": return .faq
@@ -133,7 +133,7 @@ public final class CtaRouter: @unchecked Sendable {
         renderer.show(.chat(ChatIntent(send: send)))
     }
 
-    /// Mint a slice-7 handoff and open the wa.me deep link (the ME killer flow).
+    /// Mint a implementation handoff and open the wa.me deep link (the ME killer flow).
     public func openWhatsApp() {
         let body: [String: Any] = [
             "key": key,

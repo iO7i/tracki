@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  VERTEX_EVENTS,
-  classifyReferrer,
-  isVertexEvent,
-  sanitizeVertexTrack,
-} from "./vertex";
+import { VERTEX_EVENTS, classifyReferrer, isVertexEvent, sanitizeVertexTrack } from "./vertex";
 
 describe("vertex event registry", () => {
   it("recognizes exactly the 23 named events", () => {
@@ -41,7 +36,11 @@ describe("sanitizeVertexTrack", () => {
   });
 
   it("drops non-allowlisted props and reports them", () => {
-    const r = sanitizeVertexTrack({ name: "signup_completed", secretToken: "abc", orderTotal: 999 });
+    const r = sanitizeVertexTrack({
+      name: "signup_completed",
+      secretToken: "abc",
+      orderTotal: 999,
+    });
     expect(r.props.secretToken).toBeUndefined();
     expect(r.props.orderTotal).toBeUndefined();
     expect(r.dropped).toEqual(expect.arrayContaining(["secretToken", "orderTotal"]));
@@ -54,13 +53,21 @@ describe("sanitizeVertexTrack", () => {
   });
 
   it("drops nested objects/arrays (only scalars survive)", () => {
-    const r = sanitizeVertexTrack({ name: "store_connected", storeId: { id: 1 }, region: ["riyadh"] });
+    const r = sanitizeVertexTrack({
+      name: "store_connected",
+      storeId: { id: 1 },
+      region: ["riyadh"],
+    });
     expect(r.props.storeId).toBeUndefined();
     expect(r.props.region).toBeUndefined();
   });
 
   it("coerces out-of-range categoricals to their safe default", () => {
-    const r = sanitizeVertexTrack({ name: "platform_selected", platformInterest: "shopify", deviceClass: "watch" });
+    const r = sanitizeVertexTrack({
+      name: "platform_selected",
+      platformInterest: "shopify",
+      deviceClass: "watch",
+    });
     expect(r.props.platformInterest).toBe("unknown");
     expect(r.props.deviceClass).toBe("unknown");
   });

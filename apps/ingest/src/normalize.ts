@@ -61,7 +61,7 @@ export function normalizeBatch(
   ua: string,
   receivedAt: number,
 ): StoredEvent[] {
-  // Slice 14: mobile SDKs send a device block; absent ⇒ a browser batch. The
+  // implementation: mobile SDKs send a device block; absent ⇒ a browser batch. The
   // mobile "ua" is a coarse platform/os pair built server-side from the schema-
   // bounded device fields (never the raw UA header for app traffic).
   const device = batch.device;

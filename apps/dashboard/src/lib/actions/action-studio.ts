@@ -27,7 +27,7 @@ export async function generateActionProposalsAction(formData: FormData): Promise
 
 /**
  * MANAGER: approve a proposal — create the action as a **draft** (the only path
- * to `live` stays the manual toggle; never auto-live, slice-9 principle), then
+ * to `live` stays the manual toggle; never auto-live, implementation principle), then
  * mark the proposal approved and link the action. Tenancy: the proposal must
  * belong to the resolved project. The stored draft is re-validated against the
  * action schema before insert (defense vs stale/hand-edited jsonb).

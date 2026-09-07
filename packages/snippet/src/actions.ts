@@ -170,7 +170,7 @@ export function installActions(
       });
       card.appendChild(btn);
     } else if (cta?.label && kind !== "url") {
-      // Slice 12 — right channeling: the CTA opens a channel widget (FAQ /
+      // implementation — right channeling: the CTA opens a channel widget (FAQ /
       // Agent chat / WhatsApp handoff) instead of navigating.
       const open =
         kind === "faq"

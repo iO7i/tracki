@@ -86,12 +86,12 @@ function boot(): void {
   // FAQ widget + action runtime: both live next to the events endpoint.
   const base = config.endpoint.replace(/\/v1\/events$/, "");
   const faqUrl = `${base}/v1/faq?key=${encodeURIComponent(config.key)}`;
-  // Slice 6: the Tracki Agent chat widget (created first so the FAQ widget can
+  // implementation: the Tracki Agent chat widget (created first so the FAQ widget can
   // escalate to it when it has no answer — Audit M2).
   const chatWidget = createChatWidget(`${base}/v1/chat`, config.key, queue);
   const faqWidget = createFaqWidget(queue, faqUrl, () => chatWidget.open());
   const manifestUrl = `${base}/v1/actions?key=${encodeURIComponent(config.key)}`;
-  // Slice 12 — right channeling: CTAs route to FAQ / Agent chat / WhatsApp.
+  // implementation — right channeling: CTAs route to FAQ / Agent chat / WhatsApp.
   const channels = {
     openFaq: () => faqWidget.open(),
     openChat: () => chatWidget.open(),
@@ -99,7 +99,7 @@ function boot(): void {
   };
   const actions = installActions(queue, manifestUrl, channels);
 
-  // Slice 5: render server-driven Live Assist; escalation opens the Agent.
+  // implementation: render server-driven Live Assist; escalation opens the Agent.
   const assist = createAssistRenderer(queue, channels);
   queue.setResponseHandler((data) => {
     const d = data as { assist?: Parameters<typeof assist.show>[0] };

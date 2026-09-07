@@ -8,7 +8,7 @@ import { Badge, Button } from "@tracki/ui";
 import { getTranslations } from "next-intl/server";
 
 /**
- * Tracki Autopilot review queue (slice 12) — server-rendered proposal cards:
+ * Tracki Autopilot review queue (implementation) — server-rendered proposal cards:
  * the evidence that produced the seed, the drafted bilingual copy, and the
  * code-decided targeting summary. Approve creates a *draft* action (a manager
  * then edits/toggles it live in the list); Reject keeps the row for audit.

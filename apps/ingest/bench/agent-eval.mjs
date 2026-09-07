@@ -1,4 +1,4 @@
-// Slice 6 Agent eval: seeds bilingual FAQs, runs scenarios (AR incl. dialects +
+// implementation Agent eval: seeds bilingual FAQs, runs scenarios (AR incl. dialects +
 // EN) against /v1/chat (deterministic heuristic path), asserting: answerable →
 // grounded reply citing the right article; out-of-scope/blocked → honest
 // escalation with NO fabricated answer; PII in a message is masked at rest.

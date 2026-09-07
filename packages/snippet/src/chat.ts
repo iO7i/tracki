@@ -35,7 +35,7 @@ const STR = {
 };
 
 /**
- * Tracki Agent chat widget (slice 6). Multi-turn, grounded; posts to /v1/chat.
+ * Tracki Agent chat widget (implementation). Multi-turn, grounded; posts to /v1/chat.
  * textContent-only render, RTL by page dir, fail-silent. A launcher bubble opens
  * the panel; `tracki.chat()` opens it programmatically.
  */
@@ -107,7 +107,7 @@ export function createChatWidget(chatUrl: string, key: string, queue?: EventQueu
         cta.textContent = t().talk;
         cta.style.cssText =
           "margin-block-end:10px;background:#111827;color:#fff;border:0;border-radius:8px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;";
-        // Slice 7: hand off to WhatsApp with the full web context (inquiry
+        // implementation: hand off to WhatsApp with the full web context (inquiry
         // code + wa.me deep link). Falls back to intent-capture if unavailable.
         cta.addEventListener("click", async () => {
           queue?.enqueue({

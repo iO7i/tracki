@@ -55,7 +55,7 @@ export async function createActionAction(
 }
 
 /**
- * Slice 12 — edit-in-place: update an existing action's name/status/definition.
+ * implementation — edit-in-place: update an existing action's name/status/definition.
  * Same validation as create; manifest cache always cleared (the action may be
  * live, or transitioning either way).
  */

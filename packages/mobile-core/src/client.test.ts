@@ -344,7 +344,7 @@ describe("action engine", () => {
     expect(intent.steps).toEqual([{ title: "الخطوة ١", body: "وصف", anchor: "fab" }]);
   });
 
-  it("a throwing renderer never counts an impression (slice-3 M1 parity)", async () => {
+  it("a throwing renderer never counts an impression (implementation M1 parity)", async () => {
     const transport = fakeTransport({ "/v1/actions": { actions: [manifestAction] } });
     const ctx = await makeClient({
       transport,

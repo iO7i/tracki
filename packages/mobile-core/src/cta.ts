@@ -3,7 +3,7 @@ import type { ChatIntent, CtaContent, FaqIntent, Renderer, Transport } from "./t
 
 export type CtaKind = "url" | "faq" | "chat" | "whatsapp";
 
-/** Effective channel, tolerating pre-slice-12 shapes (faq boolean / url-only). */
+/** Effective channel, tolerating pre-implementation shapes (faq boolean / url-only). */
 export function ctaKind(cta: CtaContent): CtaKind {
   if (cta.kind === "faq" || cta.kind === "chat" || cta.kind === "whatsapp" || cta.kind === "url") {
     return cta.kind;
@@ -33,7 +33,7 @@ interface FaqArticle {
 }
 
 /**
- * Channel router (slice 12 "right channeling", mobile edition): a CTA opens a
+ * Channel router (implementation "right channeling", mobile edition): a CTA opens a
  * URL, the FAQ help center, the grounded Agent chat, or a WhatsApp handoff —
  * all against the existing public APIs. Fail-silent throughout.
  */
@@ -83,7 +83,7 @@ export function createCtaRouter(deps: RouterDeps) {
     deps.renderer.show(intent);
   }
 
-  /** Mint a slice-7 handoff and open the wa.me deep link (the ME killer flow). */
+  /** Mint a implementation handoff and open the wa.me deep link (the ME killer flow). */
   function openWhatsApp(): void {
     void deps.transport
       .post(`${deps.endpoint}/v1/handoff`, {

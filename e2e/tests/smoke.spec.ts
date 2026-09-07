@@ -8,7 +8,7 @@ test("arabic is the default locale and the landing page renders RTL", async ({ p
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
   // The public landing page (not a redirect to login) — brand + a start CTA.
-  // Exact: "Tracki Mobile" now also lives in the products dropdown (slice 14).
+  // Exact: "Tracki Mobile" now also lives in the products dropdown (implementation).
   await expect(page.getByRole("navigation").getByText("Tracki", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "ابدأ مجاناً" }).first()).toBeVisible();
 });

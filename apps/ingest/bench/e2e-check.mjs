@@ -1,5 +1,5 @@
 import { createClient } from "@clickhouse/client";
-// One-shot integration check for slice 1 AC 4/5: seeds a project, sends a batch
+// One-shot integration check for implementation AC 4/5: seeds a project, sends a batch
 // with PII (valid key) + a batch with an unknown key, waits for the worker, then
 // asserts ClickHouse has the masked event and dropped the unknown-key event.
 import postgres from "postgres";

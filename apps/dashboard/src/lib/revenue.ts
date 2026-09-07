@@ -22,7 +22,7 @@ export interface RevenueInsights {
 }
 
 /**
- * Revenue Impact (slice 13): sessionized friction counts from ClickHouse × the
+ * Revenue Impact (implementation): sessionized friction counts from ClickHouse × the
  * merchant's AOV. Project-scoped; aggregate-only. ClickHouse being unavailable
  * yields zeros (honest empty state), never a thrown page.
  */

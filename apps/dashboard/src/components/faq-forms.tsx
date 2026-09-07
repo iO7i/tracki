@@ -29,7 +29,7 @@ export function FaqEditor({
   locale: string;
   orgSlug: string;
   projectSlug: string;
-  // Prefilled from a VoC knowledge-gap "Draft FAQ" hand-off (slice 8).
+  // Prefilled from a VoC knowledge-gap "Draft FAQ" hand-off (implementation).
   initialTitleAr?: string;
   initialTitleEn?: string;
 }) {

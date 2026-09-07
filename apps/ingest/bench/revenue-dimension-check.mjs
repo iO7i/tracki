@@ -1,4 +1,4 @@
-// Slice 14 revenue-by-dimension bench: seeds mobile struggles (with platform +
+// implementation revenue-by-dimension bench: seeds mobile struggles (with platform +
 // app_version) + conversions directly into ClickHouse, then runs the REAL
 // revenueByDimension + recoveryByStruggleType queries × the shared
 // revenueImpactFrom helper. Asserts the platform / app_version / struggle-type

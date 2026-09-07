@@ -57,7 +57,7 @@ describe("eventBatchSchema", () => {
     expect(eventBatchSchema.safeParse(noKey).success).toBe(false);
   });
 
-  // Slice 14 — mobile device context.
+  // implementation — mobile device context.
   it("accepts a batch with a device block", () => {
     const r = eventBatchSchema.safeParse({
       ...batch,
@@ -80,7 +80,7 @@ describe("eventBatchSchema", () => {
   });
 });
 
-// Slice 14 — mobile event vocabulary.
+// implementation — mobile event vocabulary.
 describe("mobile event types", () => {
   it("every mobile type is a valid EVENT_TYPE and counts as behavioral", () => {
     for (const t of MOBILE_EVENT_TYPES) {

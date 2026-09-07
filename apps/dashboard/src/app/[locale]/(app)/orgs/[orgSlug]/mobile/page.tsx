@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 
 /**
- * Mobile Journey Intelligence (slice 14): friction heatmaps over app screens,
+ * Mobile Journey Intelligence (implementation): friction heatmaps over app screens,
  * journey scores per session, and the screens worth intervening on first.
  * Same loop as web — observe → detect → intervene → measure — over the mobile
  * SDK traffic (platform ios/android).

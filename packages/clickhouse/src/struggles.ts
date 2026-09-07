@@ -105,7 +105,7 @@ export async function struggleCountsByPath(
   return rs.json<PathCountRow>();
 }
 
-// ── Rich struggle reporting (slice 11) ────────────────────────────────────
+// ── Rich struggle reporting (implementation) ────────────────────────────────────
 
 export interface SeverityCountRow {
   severity: string;
@@ -173,7 +173,7 @@ export interface FrictionSeedRow {
 }
 
 /**
- * Slice 12 — Autopilot seeds: per path, the DOMINANT struggle type + element
+ * implementation — Autopilot seeds: per path, the DOMINANT struggle type + element
  * alongside count and summed friction, in one pass. Distinct aliases (top_type,
  * top_element, friction) avoid shadowing the real columns inside aggregates.
  */

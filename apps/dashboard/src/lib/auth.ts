@@ -52,7 +52,7 @@ export async function createSession(userId: string): Promise<void> {
   const now = new Date();
   const expiresAt = sessionExpiryFrom(now);
   // Audit M3: opportunistically reclaim this user's expired sessions on login
-  // so the table doesn't grow unboundedly. A global sweep job is a slice-1 item.
+  // so the table doesn't grow unboundedly. A global sweep job is a implementation item.
   await db.delete(sessions).where(and(eq(sessions.userId, userId), lt(sessions.expiresAt, now)));
   await db.insert(sessions).values({
     tokenHash: hashSessionToken(token),

@@ -70,7 +70,7 @@ export interface CtaContent {
   label: string;
   kind?: string; // url | faq | chat | whatsapp (legacy: absent)
   url?: string;
-  faq?: boolean; // legacy pre-slice-12 shape
+  faq?: boolean; // legacy pre-implementation shape
 }
 
 export interface TourStepContent {
@@ -98,7 +98,7 @@ export interface ActionIntent {
   dismiss(): void;
 }
 
-/** Server-driven Live Assist for a detected struggle (slice 5 mechanism). */
+/** Server-driven Live Assist for a detected struggle (implementation mechanism). */
 export interface AssistIntent {
   intent: "assist";
   actionId: string;

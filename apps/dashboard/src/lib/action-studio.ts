@@ -22,9 +22,9 @@ export interface ActionProposalView {
 }
 
 /**
- * Tracki Autopilot (slice 12): turn the friction report into pending action
- * proposals — the QANT Web "campaign auto-generation" loop. Seeds come from
- * slice-11 struggle data (paths ranked by summed friction, dominant type +
+ * Tracki Autopilot (implementation): turn the friction report into pending action
+ * proposals — the contextual campaign generation workflow. Seeds come from
+ * implementation struggle data (paths ranked by summed friction, dominant type +
  * element), reinforced by VoC gaps; copy is drafted by Claude (or the offline
  * GCC playbook); a manager approves into a *draft* action. Never auto-live.
  * Project-scoped; evidence is masked/aggregate only. Returns # created.

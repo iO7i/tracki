@@ -27,7 +27,7 @@ interface AssistDeps {
 }
 
 /**
- * Server-driven Live Assist, mobile edition (slice 5 mechanism unchanged):
+ * Server-driven Live Assist, mobile edition (implementation mechanism unchanged):
  * the worker matched a struggle to an action + FAQ and stashed the payload;
  * it arrives on an event-flush response and renders as a contextual drawer.
  * Once per session per action; fail-silent.
@@ -82,7 +82,7 @@ export function createAssistHandler(deps: AssistDeps) {
           } else if (kind === "whatsapp") {
             deps.cta.openWhatsApp();
           } else {
-            // chat — and the legacy slice-5 shape (faq:true, no kind), which
+            // chat — and the legacy implementation shape (faq:true, no kind), which
             // keeps its audited semantics of escalating to the Agent.
             deps.cta.openChat();
           }

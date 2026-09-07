@@ -57,7 +57,7 @@ export interface ActionOutcomeRow {
 }
 
 /**
- * Slice 12 — Outcomes: per action, sessions that struggled BEFORE their first
+ * implementation — Outcomes: per action, sessions that struggled BEFORE their first
  * impression of it, and how many of those *recovered* — no further struggle in
  * the session after the impression, or the action's goal fired. Correlation,
  * not causation (labeled as such in the UI). Sessionized via session_id across
@@ -122,7 +122,7 @@ export interface ActionChannelRow {
   clicks: string;
 }
 
-/** Slice 12 — clicks per action × channel (url/faq/chat/whatsapp; '' = pre-slice-12 clicks). */
+/** implementation — clicks per action × channel (url/faq/chat/whatsapp; '' = pre-implementation clicks). */
 export async function actionChannelClicks(
   client: ClickHouseClient,
   orgId: string,

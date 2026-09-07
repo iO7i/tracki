@@ -16,23 +16,23 @@ export const EVENT_TYPES = [
   "page_leave",
   "identify",
   "track",
-  // Action tracking (slice 3) — emitted by the snippet, carry {action_id, variant}.
+  // Action tracking (implementation) — emitted by the snippet, carry {action_id, variant}.
   "action_impression",
   "action_click",
   "action_dismiss",
   "action_goal",
-  // FAQ tracking (slice 4) — carry {article_id?, query?}.
+  // FAQ tracking (implementation) — carry {article_id?, query?}.
   "faq_view",
   "faq_search",
   "faq_search_noresult",
   "faq_vote_up",
   "faq_vote_down",
-  // Live Assist tracking (slice 5) — carry {action_id, article_id?, mode}.
+  // Live Assist tracking (implementation) — carry {action_id, article_id?, mode}.
   "assist_shown",
   "assist_helpful",
   "assist_unhelpful",
   "assist_escalate",
-  // Mobile behavioral events (slice 14) — emitted by the mobile SDKs. Screens
+  // Mobile behavioral events (implementation) — emitted by the mobile SDKs. Screens
   // map onto `path` ("/" + screen name) so every path-keyed query (struggles,
   // HIGH_INTENT_PATTERN, revenue-by-path) works unchanged on mobile.
   "screen_view",
@@ -60,7 +60,7 @@ export const EVENT_TYPES = [
 ] as const;
 export type EventType = (typeof EVENT_TYPES)[number];
 
-/** Mobile-only event types (slice 14) — subset of EVENT_TYPES. */
+/** Mobile-only event types (implementation) — subset of EVENT_TYPES. */
 export const MOBILE_EVENT_TYPES = [
   "screen_view",
   "screen_leave",
@@ -105,7 +105,7 @@ export const BEHAVIORAL_EVENT_TYPES = [
   "page_leave",
   "identify",
   "track",
-  // Slice 14: mobile activity is visitor behavior too.
+  // implementation: mobile activity is visitor behavior too.
   ...MOBILE_EVENT_TYPES,
 ] as const;
 
@@ -143,7 +143,7 @@ export const SDK_FLAVORS = ["react-native", "flutter", "ios", "android", "web"] 
 export type SdkFlavor = (typeof SDK_FLAVORS)[number];
 
 /**
- * Optional batch-level device context (slice 14). Sent once per batch by the
+ * Optional batch-level device context (implementation). Sent once per batch by the
  * mobile SDKs; stamped onto every stored event so revenue/recovery can be cut
  * by app version and device type.
  */
@@ -164,7 +164,7 @@ export const eventBatchSchema = z.object({
   userId: z.string().min(1).max(128).optional(),
   sessionId: z.string().min(1).max(64),
   sentAt: z.number().int().positive(),
-  // Slice 14: mobile SDKs describe their runtime; absent ⇒ web.
+  // implementation: mobile SDKs describe their runtime; absent ⇒ web.
   device: deviceContextSchema.optional(),
   events: z.array(eventInputSchema).min(1).max(MAX_EVENTS_PER_BATCH),
 });
@@ -190,7 +190,7 @@ export interface StoredEvent {
   referrer: string;
   props: string;
   ua: string;
-  // Slice 14: device context, denormalized per row ('' / 'web' for browsers).
+  // implementation: device context, denormalized per row ('' / 'web' for browsers).
   platform: string;
   app_version: string;
   device_model: string;

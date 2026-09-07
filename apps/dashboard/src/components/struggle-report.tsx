@@ -11,7 +11,7 @@ import type { ReactNode } from "react";
 import { StruggleTypeIcon } from "./struggle-visuals";
 
 /**
- * SSR rich struggle report (slice 11): counts by type, paths ranked by summed
+ * SSR rich struggle report (implementation): counts by type, paths ranked by summed
  * friction score, the elements causing the most pain, and the most-struggling
  * visitors. CSS bars, RTL-safe (logical properties). Visual refresh: section
  * panels, type icons, rank badges, gradient bars, visitor avatars.

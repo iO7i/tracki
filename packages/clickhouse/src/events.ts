@@ -53,7 +53,7 @@ export async function recentEvents(
 /**
  * Distinct recent paths/screens for ONE session (newest first) — a cheap,
  * tenancy- + session-scoped behavioral signal for contextual FAQ grounding
- * (slice 5 "ground on recent events", not just the current page).
+ * (implementation "ground on recent events", not just the current page).
  */
 export async function recentSessionPaths(
   client: ClickHouseClient,
@@ -77,7 +77,7 @@ export async function recentSessionPaths(
   return (await rs.json<{ path: string }>()).map((r) => r.path);
 }
 
-/** Timeline rows carry props + device context for mobile journey rendering (slice 14). */
+/** Timeline rows carry props + device context for mobile journey rendering (implementation). */
 export interface TimelineEventRow extends LiveEventRow {
   props: string;
   platform: string;

@@ -86,7 +86,7 @@
     "keyLabel": "Project key",
     "createdAt": "Created",
     "statsTitle": "Overview",
-    "statsPlaceholder": "Live event stats will appear here once the data pipeline ships (slice 1)"
+    "statsPlaceholder": "Live event stats will appear here once the data pipeline ships (implementation)"
   },
   "settings": {
     "title": "Organization settings",
