@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tracki — Test-All Console</title>
+    <link rel="stylesheet" href="/test-all.css" />
+    <!--
+      Loads the REAL production snippet against ?key=pk_… (same loader as the demo
+      store). Everything on this page drives window.tracki or public ingest APIs —
+      nothing bypasses production code paths. This page is dev/QA tooling only.
+    -->
+    <script>
+      window.__tracki_cfg = (function () {
+        var p = new URLSearchParams(location.search);
+        return {
+          key: p.get("key") || "",
+          endpoint: p.get("endpoint") || "http://localhost:4000/v1/events",
+          src: p.get("src") || "http://localhost:4000/tracki.js",
+          org: p.get("org") || "",
+          project: p.get("project") || "",
+          dash: p.get("dash") || "http://localhost:3000",
+        };
+      })();
+      (function () {
+        var c = window.__tracki_cfg;
+        window.tracki = window.tracki || { q: [] };
+        ["track", "identify", "page", "faq", "chat"].forEach(function (m) {
+          window.tracki[m] =
+            window.tracki[m] ||
+            function () {
+              window.tracki.q.push([m].concat([].slice.call(arguments)));
+            };
+        });
+        if (c.key) {
+          var s = document.createElement("script");
+          s.async = true;
+          s.src = c.src;
+          s.setAttribute("data-key", c.key);
+          s.setAttribute("data-endpoint", c.endpoint);
+          document.head.appendChild(s);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="/test-all.js"></script>
+  </body>
+</html>

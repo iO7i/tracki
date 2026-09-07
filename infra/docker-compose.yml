@@ -1,0 +1,61 @@
+name: tracki
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: tracki
+      POSTGRES_PASSWORD: tracki
+      POSTGRES_DB: tracki
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tracki"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Idle until slice 1 (event analytics) — included for dev-environment parity.
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    environment:
+      CLICKHOUSE_USER: tracki
+      CLICKHOUSE_PASSWORD: tracki
+      CLICKHOUSE_DB: tracki
+    volumes:
+      - chdata:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  # Idle until slice 1 (object storage parity for prod S3).
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9101"
+    ports:
+      - "9100:9000"
+      - "9101:9101"
+    environment:
+      MINIO_ROOT_USER: tracki
+      MINIO_ROOT_PASSWORD: tracki-dev-secret
+    volumes:
+      - miniodata:/data
+
+volumes:
+  pgdata:
+  chdata:
+  redisdata:
+  miniodata:

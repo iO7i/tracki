@@ -1,0 +1,72 @@
+{
+  "description": "Canonical journey: every SDK must POST exactly this batch to /v1/events. Deterministic clock starts at 1700000000000 and advances +1000ms BEFORE each script step (init happens at the start value). Id factory returns anon_1 / sess_1. Compare as parsed JSON, never as strings.",
+  "config": {
+    "key": "pk_conformance",
+    "endpoint": "https://ingest.example",
+    "locale": "ar",
+    "device": {
+      "platform": "ios",
+      "osVersion": "17.4",
+      "appVersion": "2.1.0",
+      "model": "iPhone15,2"
+    }
+  },
+  "script": [
+    { "call": "screen", "args": ["Home"] },
+    { "call": "screen", "args": ["Checkout"] },
+    { "call": "otp", "args": ["fail"] },
+    { "call": "otp", "args": ["fail"] },
+    { "call": "payment", "args": ["fail", { "method": "mada" }] },
+    { "call": "flow", "args": ["abandon", "checkout"] },
+    { "call": "track", "args": ["purchase"] },
+    { "call": "identify", "args": ["user_42"] }
+  ],
+  "expectedBatch": {
+    "key": "pk_conformance",
+    "anonId": "anon_1",
+    "userId": "user_42",
+    "sessionId": "sess_1",
+    "sentAt": 1700000008000,
+    "device": {
+      "platform": "ios",
+      "osVersion": "17.4",
+      "appVersion": "2.1.0",
+      "model": "iPhone15,2"
+    },
+    "events": [
+      { "type": "app_foreground", "ts": 1700000000000, "path": "/", "props": { "launch": "cold" } },
+      { "type": "screen_view", "ts": 1700000001000, "path": "/Home" },
+      {
+        "type": "screen_leave",
+        "ts": 1700000002000,
+        "path": "/Home",
+        "props": { "durationMs": 1000 }
+      },
+      { "type": "screen_view", "ts": 1700000002000, "path": "/Checkout", "referrer": "/Home" },
+      { "type": "otp_fail", "ts": 1700000003000, "path": "/Checkout", "referrer": "/Home" },
+      { "type": "otp_fail", "ts": 1700000004000, "path": "/Checkout", "referrer": "/Home" },
+      {
+        "type": "payment_fail",
+        "ts": 1700000005000,
+        "path": "/Checkout",
+        "referrer": "/Home",
+        "props": { "method": "mada" }
+      },
+      {
+        "type": "flow_abandon",
+        "ts": 1700000006000,
+        "path": "/Checkout",
+        "referrer": "/Home",
+        "props": { "flow": "checkout" }
+      },
+      {
+        "type": "track",
+        "ts": 1700000007000,
+        "path": "/Checkout",
+        "referrer": "/Home",
+        "props": { "name": "purchase" }
+      },
+      { "type": "identify", "ts": 1700000008000, "path": "/Checkout", "referrer": "/Home" }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+  - "e2e"
+  - "e2e/demo-site"
+allowBuilds:
+  '@biomejs/biome': set this to true or false
+  '@parcel/watcher': set this to true or false
+  '@swc/core': set this to true or false
+  esbuild: set this to true or false
+  sharp: set this to true or false

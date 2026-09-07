@@ -1,0 +1,120 @@
+name: tracki-prod
+
+# Production stack: one app image (built once) runs as ingest, dashboard, and a
+# one-shot migrate job; Postgres + ClickHouse + Redis are internal-only (no host
+# ports); Caddy terminates TLS and routes the two public domains.
+#
+# Run from the repo root:  docker compose -f infra/docker-compose.prod.yml --env-file .env.prod up -d --build
+# Stores are reached by service name on the internal network (see .env.sample).
+
+x-app-build: &app-build
+  context: ..
+  dockerfile: Dockerfile
+  args:
+    NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+    NEXT_PUBLIC_INGEST_URL: ${NEXT_PUBLIC_INGEST_URL}
+    NEXT_PUBLIC_SNIPPET_URL: ${NEXT_PUBLIC_SNIPPET_URL}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: ${CLICKHOUSE_DB}
+    volumes:
+      - chdata:/var/lib/clickhouse
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # One-shot: apply Postgres (drizzle) + ClickHouse migrations, then exit.
+  migrate:
+    build: *app-build
+    image: tracki-app:latest
+    command: ["sh", "-c", "pnpm db:migrate && pnpm ch:migrate"]
+    env_file: ../.env.prod
+    restart: "no"
+    depends_on:
+      postgres: { condition: service_healthy }
+      clickhouse: { condition: service_healthy }
+
+  ingest:
+    build: *app-build
+    image: tracki-app:latest
+    command: ["pnpm", "--filter", "@tracki/ingest", "start"]
+    env_file: ../.env.prod
+    restart: unless-stopped
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  dashboard:
+    image: tracki-app:latest
+    command: ["pnpm", "--filter", "@tracki/dashboard", "start"]
+    env_file: ../.env.prod
+    restart: unless-stopped
+    depends_on:
+      ingest: { condition: service_healthy }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      INGEST_DOMAIN: ${INGEST_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - dashboard
+      - ingest
+
+volumes:
+  pgdata:
+  chdata:
+  redisdata:
+  caddydata:
+  caddyconfig:

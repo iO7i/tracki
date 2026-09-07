@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vertex ⇄ Tracki — acceptance journey harness</title>
+    <style>
+      body { font: 15px system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+      h1 { font-size: 1.2rem; } h2 { font-size: .95rem; margin-top: 1.4rem; color: #555; }
+      button { margin: .2rem; padding: .5rem .7rem; cursor: pointer; }
+      #log { background: #111; color: #6f6; padding: .6rem; height: 180px; overflow: auto; font: 12px monospace; white-space: pre-wrap; }
+      input { padding: .4rem; }
+      .pill { display:inline-block; padding:.1rem .5rem; border-radius:1rem; background:#eee; font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <h1>Vertex ⇄ Tracki acceptance journey</h1>
+    <p>Consent: <span id="consent" class="pill">pending</span> —
+      <button onclick="grant()">Grant consent</button>
+      <button onclick="deny()">Deny</button></p>
+
+    <h2>1–3 · Acquisition & engagement</h2>
+    <button onclick="V.landingViewed()">landing_viewed</button>
+    <button onclick="V.languageChanged('ar')">language_changed</button>
+    <button onclick="V.heroCtaClicked('hero_primary')">hero_cta_clicked</button>
+    <button onclick="V.pricingViewed()">pricing_viewed</button>
+    <button onclick="V.pricingPlanSelected('growth')">pricing_plan_selected</button>
+    <button onclick="V.featureSectionViewed('profit_analysis')">feature_section_viewed</button>
+    <button onclick="V.faqOpened('connect-store')">faq_opened</button>
+    <button onclick="V.demoStoreOpened()">demo_store_opened</button>
+    <button onclick="V.profitAnalysisClicked()">profit_analysis_clicked</button>
+
+    <h2>3 · Trigger a struggle (repeated submit + rage)</h2>
+    <form onsubmit="event.preventDefault(); struggle()">
+      <input id="f" placeholder="type then submit repeatedly" />
+      <button id="sb" type="submit">Submit</button>
+    </form>
+
+    <h2>4–5 · Booking (start → abandon → complete)</h2>
+    <button onclick="V.bookingStarted('lead_123')">booking_started</button>
+    <button onclick="V.bookingCompleted({leadId:'lead_123', userId:'usr_abc'})">booking_completed (+identify)</button>
+    <button onclick="V.signupCompleted({userId:'usr_abc', orgId:'org_9'})">signup_completed (+identify)</button>
+    <button onclick="V.trialStarted({userId:'usr_abc', orgId:'org_9'})">trial_started</button>
+
+    <h2>6–7 · Platform + OAuth</h2>
+    <button onclick="V.platformSelected('salla')">platform_selected</button>
+    <button onclick="V.sallaSelected()">salla_selected</button>
+    <button onclick="V.oauthStarted('salla')">oauth_started</button>
+    <button onclick="V.oauthFailed({platform:'salla', errorCode:'access_denied'})">oauth_failed</button>
+    <button onclick="V.storeConnected({storeId:'store_77', platform:'salla', orgId:'org_9'})">store_connected</button>
+
+    <h2>8–9 · Activation + revenue</h2>
+    <button onclick="V.firstSyncCompleted({storeId:'store_77'})">first_sync_completed</button>
+    <button onclick="V.firstProfitReportViewed({storeId:'store_77'})">first_profit_report_viewed</button>
+    <button onclick="V.subscriptionStarted({plan:'growth', currency:'SAR'})">subscription_started</button>
+    <button onclick="V.subscriptionCancelled({reason:'too_expensive'})">subscription_cancelled</button>
+
+    <h2>Log</h2>
+    <div id="log"></div>
+
+    <!--
+      This harness uses the REAL Tracki snippet + a tiny inline mirror of the
+      vertex-analytics client (kept dependency-free for a static page). It proves
+      the 23 events, consent gate, and PII safety end-to-end against a live stack.
+
+      Open with ?key=pk_...&endpoint=http://localhost:4000/v1/events
+    -->
+    <script>
+      const params = new URLSearchParams(location.search);
+      const KEY = params.get("key") || "pk_dev";
+      const ENDPOINT = params.get("endpoint") || "http://localhost:4000/v1/events";
+      const ORIGIN = new URL(ENDPOINT).origin;
+      const log = (m) => { const el = document.getElementById("log"); el.textContent += m + "\n"; el.scrollTop = el.scrollHeight; };
+
+      // Loader stub so events fired before the snippet loads are queued.
+      window.tracki = window.tracki || { q: [], track: (...a) => window.tracki.q.push(["track", ...a]),
+        identify: (...a) => window.tracki.q.push(["identify", ...a]), consent: (...a) => window.tracki.q.push(["consent", ...a]) };
+
+      // Inject the real snippet (AI chat OFF, consent pending until granted).
+      const s = document.createElement("script");
+      s.async = true; s.src = ORIGIN + "/tracki.js";
+      s.setAttribute("data-tracki", "1");
+      s.setAttribute("data-key", KEY);
+      s.setAttribute("data-endpoint", ENDPOINT);
+      s.setAttribute("data-consent", "pending");
+      s.setAttribute("data-chat", "off");
+      document.head.appendChild(s);
+
+      // Inline mirror of vertex-analytics (the shipped client is TS; this keeps
+      // the harness a zero-build static file). Same event names + safe props.
+      let platformInterest = "unknown";
+      const ctx = () => ({ language: document.documentElement.lang, deviceClass: "desktop", platformInterest });
+      const emit = (name, props = {}) => {
+        const p = { ...ctx(), ...props };
+        Object.keys(p).forEach((k) => p[k] === undefined && delete p[k]);
+        window.tracki.track(name, p);
+        log("→ " + name + " " + JSON.stringify(props));
+      };
+      window.V = {
+        landingViewed: () => emit("landing_viewed"),
+        languageChanged: (l) => { document.documentElement.lang = l; emit("language_changed", { language: l }); },
+        heroCtaClicked: (id) => emit("hero_cta_clicked", { ctaId: id }),
+        pricingViewed: () => emit("pricing_viewed"),
+        pricingPlanSelected: (id) => emit("pricing_plan_selected", { planId: id }),
+        featureSectionViewed: (s) => emit("feature_section_viewed", { section: s }),
+        faqOpened: (id) => emit("faq_opened", { faqId: id }),
+        demoStoreOpened: () => emit("demo_store_opened"),
+        profitAnalysisClicked: () => emit("profit_analysis_clicked"),
+        bookingStarted: (lead) => emit("booking_started", { leadId: lead }),
+        bookingCompleted: (o) => { if (o.userId) window.tracki.identify(o.userId); emit("booking_completed", o); },
+        signupCompleted: (o) => { window.tracki.identify(o.userId); emit("signup_completed", o); },
+        trialStarted: (o) => { window.tracki.identify(o.userId); emit("trial_started", o); },
+        platformSelected: (p) => { platformInterest = p; emit("platform_selected", { platform: p }); },
+        sallaSelected: () => { platformInterest = platformInterest === "zid" ? "both" : "salla"; emit("salla_selected", { platform: "salla" }); },
+        oauthStarted: (p) => emit("oauth_started", { platform: p }),
+        oauthFailed: (o) => emit("oauth_failed", o),
+        storeConnected: (o) => emit("store_connected", o),
+        firstSyncCompleted: (o) => emit("first_sync_completed", o),
+        firstProfitReportViewed: (o) => emit("first_profit_report_viewed", o),
+        subscriptionStarted: (o) => emit("subscription_started", o),
+        subscriptionCancelled: (o) => emit("subscription_cancelled", o),
+      };
+
+      function grant() { window.tracki.consent(true); document.getElementById("consent").textContent = "granted"; log("✓ consent granted — buffered events flush"); }
+      function deny() { window.tracki.consent(false); document.getElementById("consent").textContent = "denied"; log("✗ consent denied — nothing sent"); }
+
+      // Struggle: rapid repeated submits (repeated_submit) + rage clicks.
+      let n = 0;
+      function struggle() { n++; log("submit #" + n + " (repeated_submit forms after 2+)"); }
+
+      log("harness ready · key=" + KEY + " · endpoint=" + ENDPOINT);
+      log("grant consent, then walk the journey top→bottom.");
+    </script>
+  </body>
+</html>

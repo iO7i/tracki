@@ -1,0 +1,1 @@
+ALTER TABLE "wa_messages" ADD COLUMN "status" text DEFAULT 'sent' NOT NULL;

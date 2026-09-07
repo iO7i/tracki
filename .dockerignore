@@ -1,0 +1,14 @@
+# Keep the build context lean — installed/built artifacts are recreated in-image.
+**/node_modules
+**/.next
+**/dist
+**/.turbo
+.git
+**/*.log
+e2e/test-results
+e2e/_*.png
+e2e/_*.mjs
+**/*.png
+**/.env
+**/.env.*
+!**/.env.example

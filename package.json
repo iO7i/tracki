@@ -1,0 +1,27 @@
+{
+  "name": "tracki",
+  "private": true,
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "check-types": "turbo check-types",
+    "test": "turbo test",
+    "db:generate": "pnpm --filter @tracki/dashboard db:generate",
+    "db:migrate": "pnpm --filter @tracki/dashboard db:migrate",
+    "ch:migrate": "pnpm --filter @tracki/clickhouse ch:migrate",
+    "snippet:build": "pnpm --filter @tracki/snippet build",
+    "demo": "pnpm --filter @tracki/demo-site serve",
+    "e2e": "pnpm --filter @tracki/e2e e2e"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.3"
+  }
+}

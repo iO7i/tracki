@@ -2,6 +2,8 @@
 
 Arabic-first behavioral intelligence for websites and mobile applications.
 
+Created by **Hosam Talbi**.
+
 Tracki connects customer behavior to timely assistance. It detects friction such as repeated payment failures, OTP loops, rage clicks, and abandoned onboarding, then delivers contextual help through web interfaces, mobile experiences, or WhatsApp. An Arabic and English dashboard brings customer journeys, interventions, and outcomes together.
 
 ## Capabilities
