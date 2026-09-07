@@ -1,4 +1,4 @@
-import { containsPii, maskPii } from "@tracki/shared";
+import { containsPii, maskPii, scrubProperties, scrubText } from "@tracki/shared";
 
 const MAX_DEPTH = 8;
 
@@ -11,6 +11,7 @@ const MAX_DEPTH = 8;
  * Audit B2: object keys are masked too (PII is commonly used as map keys).
  */
 export function scrubValue(value: unknown, depth = 0): unknown {
+  if (depth === 0) return scrubProperties(value);
   if (typeof value === "string") return maskPii(value);
   if (value === null || typeof value !== "object") return value;
   if (depth >= MAX_DEPTH) return "[truncated]";
@@ -23,7 +24,7 @@ export function scrubValue(value: unknown, depth = 0): unknown {
 }
 
 export function scrubString(value: string | undefined): string {
-  return value ? maskPii(value) : "";
+  return value ? scrubText(value) : "";
 }
 
 /**

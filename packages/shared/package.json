@@ -10,6 +10,7 @@
     "./actions": "./src/actions.ts",
     "./faq": "./src/faq.ts",
     "./text": "./src/text.ts",
+    "./pii": "./src/pii.ts",
     "./rage": "./src/rage.ts"
   },
   "scripts": {

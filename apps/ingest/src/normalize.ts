@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import type { EventBatch, ProjectRef, StoredEvent } from "@tracki/shared";
 import { sanitizeVertexTrack } from "@tracki/shared";
 import { scrubSerialized, scrubString, scrubValue } from "./scrub.js";
@@ -61,6 +61,22 @@ export function normalizeBatch(
   ua: string,
   receivedAt: number,
 ): StoredEvent[] {
+  const maxAge = 24 * 60 * 60 * 1000;
+  const skew = 120_000;
+  if (!Number.isSafeInteger(batch.sentAt) || batch.sentAt > receivedAt + skew) {
+    throw new Error("invalid event time");
+  }
+  const correction = Math.max(0, batch.sentAt - receivedAt);
+  for (const e of batch.events) {
+    if (
+      !Number.isSafeInteger(e.ts) ||
+      e.ts <= 0 ||
+      e.ts > receivedAt + skew ||
+      e.ts - correction < receivedAt - maxAge
+    )
+      throw new Error("invalid event time");
+  }
+  const occurrences = new Map<string, number>();
   // implementation: mobile SDKs send a device block; absent ⇒ a browser batch. The
   // mobile "ua" is a coarse platform/os pair built server-side from the schema-
   // bounded device fields (never the raw UA header for app traffic).
@@ -73,13 +89,20 @@ export function normalizeBatch(
   const deviceModel = device?.model ?? "";
   return batch.events.map((e) => {
     const props = normalizeProps(e.type, e.props);
+    const fingerprint = canonical({ anon: batch.anonId, session: batch.sessionId, event: e });
+    const ordinal = occurrences.get(fingerprint) ?? 0;
+    occurrences.set(fingerprint, ordinal + 1);
+    const identity = e.eventId ?? `${batch.sentAt}:${fingerprint}:${ordinal}`;
+    const digest = createHash("sha256")
+      .update(canonical([ref.orgId, ref.projectId, identity]))
+      .digest("hex");
     return {
       org_id: ref.orgId,
       project_id: ref.projectId,
       anon_id: batch.anonId,
-      user_id: batch.userId ?? "",
+      user_id: scrubString(batch.userId),
       session_id: batch.sessionId,
-      event_id: randomUUID(),
+      event_id: `${digest.slice(0, 8)}-${digest.slice(8, 12)}-${digest.slice(12, 16)}-${digest.slice(16, 20)}-${digest.slice(20, 32)}`,
       type: e.type,
       path: scrubString(e.path),
       url: scrubString(e.url),
@@ -87,10 +110,20 @@ export function normalizeBatch(
       props: props ? scrubSerialized(JSON.stringify(props)) : "{}",
       ua: coarseUa,
       platform,
-      app_version: appVersion,
-      device_model: deviceModel,
-      ts: e.ts,
+      app_version: scrubString(appVersion),
+      device_model: scrubString(deviceModel),
+      ts: e.ts - correction,
       received_at: receivedAt,
     };
   });
+}
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`)
+      .join(",")}}`;
+  return JSON.stringify(value) ?? "null";
 }
