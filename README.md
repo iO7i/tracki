@@ -1,0 +1,75 @@
+# Tracki
+
+Arabic-first behavioral intelligence for websites and mobile applications.
+
+Tracki connects customer behavior to timely assistance. It detects friction such as repeated payment failures, OTP loops, rage clicks, and abandoned onboarding, then delivers contextual help through web interfaces, mobile experiences, or WhatsApp. An Arabic and English dashboard brings customer journeys, interventions, and outcomes together.
+
+## Capabilities
+
+- **Behavioral analytics:** first-party event collection, live activity, visitor timelines, saved segments, and friction scoring.
+- **Contextual interventions:** targeted popups, banners, tooltips, mobile tours, and help drawers with scheduling, frequency caps, and A/B variants.
+- **Knowledge and support:** Arabic-aware FAQ retrieval, citation-grounded chat, and WhatsApp handoff with conversation context and human takeover.
+- **Knowledge improvement:** recurring unanswered questions inform FAQ drafts; proposed content and actions require review before publication.
+- **Outcome reporting:** revenue-at-risk estimates and intervention recovery analysis, with correlation distinguished from causal attribution.
+- **Arabic and English:** localized interfaces, right-to-left layouts, and Arabic text normalization.
+
+## Architecture
+
+Tracki is a TypeScript monorepo managed with pnpm and Turborepo. Web and mobile clients share an ingestion protocol and processing pipeline.
+
+| Component | Responsibility |
+| --- | --- |
+| `apps/dashboard` | Next.js dashboard, authentication, administration, and analytics |
+| `apps/ingest` | Fastify API, event processing, friction detection, and assistance |
+| `packages/snippet` | Browser tracking and intervention rendering |
+| `packages/mobile-core` | Shared mobile event, session, and action engine |
+| `packages/sdk-react-native` | React Native integration |
+| `sdks` | Flutter, Swift, and Kotlin integrations and protocol fixtures |
+| `packages/ai` | Retrieval, conversational assistance, and content proposals |
+| `packages/whatsapp` | Meta Cloud API integration and local simulator |
+| `packages/shared` | Event contracts, privacy masking, normalization, and scoring |
+
+PostgreSQL stores application data, ClickHouse stores behavioral events, and Redis supports queues, windows, caching, and live updates. Docker Compose provides local infrastructure.
+
+## Run locally
+
+Requirements: Node.js 20 or later, pnpm 9, and Docker with Compose.
+
+```sh
+git clone https://github.com/iO7i/tracki.git
+cd tracki
+corepack enable
+pnpm install --frozen-lockfile
+docker compose -f infra/docker-compose.yml up -d
+pnpm db:migrate
+pnpm ch:migrate
+pnpm dev
+```
+
+The dashboard normally runs at `http://localhost:3000`, the ingestion API at `http://localhost:4000`, and the demo at `http://localhost:4321`. Use the included environment templates when overriding local service settings.
+
+Local development supports a deterministic language-model fallback and a WhatsApp simulator. Set `ANTHROPIC_API_KEY` to enable the hosted language-model integration. Real WhatsApp messaging requires Meta Cloud API credentials. See [Deployment](docs/DEPLOY.md) for production configuration.
+
+## Verification
+
+```sh
+pnpm lint
+pnpm check-types
+pnpm test
+pnpm build
+```
+
+Playwright tests run with `pnpm e2e` against a running dashboard. Integration checks under `apps/ingest/bench` exercise the live API and stores and require infrastructure and migrations.
+
+## Scope and limitations
+
+Tracki is a portfolio implementation with web and mobile functionality. Flutter, Swift, and Kotlin SDK sources include protocol fixtures but have not been compile-verified with native toolchains; see their individual READMEs. Revenue figures depend on configured order values and conversion events and represent estimates or observed correlations. Citation and escalation controls reduce unsupported answers but do not establish a universal accuracy guarantee.
+
+Tenant-scoped access and ingestion-time masking are part of the implementation. Deployment requires appropriate credentials, infrastructure configuration, and validation for the intended environment.
+
+## Documentation
+
+- [Deployment](docs/DEPLOY.md)
+- [Mobile wire protocol](docs/mobile-wire-protocol.md)
+- [Mobile SDK overview](sdks/README.md)
+- [React Native SDK](packages/sdk-react-native/README.md)
