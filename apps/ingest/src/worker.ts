@@ -5,6 +5,7 @@ import { computeAssist } from "./assist";
 import { REDIS_KEYS } from "./config";
 import { detectBatch } from "./detector";
 import { DurableStateStore } from "./durable-state";
+import { maintainInbox } from "./inbox";
 import { pg } from "./pg";
 import { redis } from "./redis";
 
@@ -22,9 +23,14 @@ export async function processOne(sql: postgres.Sql, io: WorkerIO): Promise<boole
   let owned: { project: string; id: string } | undefined;
   try {
     return (await sql.begin(async (tx) => {
-      const rows = await tx`SELECT * FROM telemetry_inbox
-        WHERE completed_at IS NULL AND dead_at IS NULL AND available_at <= now()
-        ORDER BY event_time,event_id LIMIT 1 FOR UPDATE SKIP LOCKED`;
+      await tx`SET LOCAL idle_in_transaction_session_timeout = '60s'`;
+      await tx`SET LOCAL statement_timeout = '30s'`;
+      const rows = await tx`SELECT i.* FROM telemetry_inbox i
+        WHERE i.completed_at IS NULL AND i.dead_at IS NULL AND i.available_at <= now()
+          AND NOT EXISTS (SELECT 1 FROM telemetry_inbox earlier
+            WHERE earlier.project_id=i.project_id AND earlier.completed_at IS NULL AND earlier.dead_at IS NULL
+              AND (earlier.event_time,earlier.event_id)<(i.event_time,i.event_id))
+        ORDER BY i.event_time,i.event_id LIMIT 1 FOR UPDATE OF i SKIP LOCKED`;
       const row = rows[0];
       if (!row) return false;
       const lock =
@@ -69,7 +75,16 @@ export function startWorker(): { stop: () => Promise<void> } {
   let running = true;
   const sql = pg();
   const loop = (async () => {
+    let maintenanceAt = 0;
     while (running) {
+      if (Date.now() >= maintenanceAt) {
+        try {
+          await maintainInbox(sql);
+        } catch {
+          console.error("telemetry maintenance unavailable");
+        }
+        maintenanceAt = Date.now() + 300_000;
+      }
       const detections: StruggleDetection[] = [];
       const done = await processOne(sql, {
         events: (e) => insertEvents(ch, e),

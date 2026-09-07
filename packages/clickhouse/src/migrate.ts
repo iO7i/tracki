@@ -66,6 +66,20 @@ export async function migrate(): Promise<string[]> {
     await client.command({
       query: `ALTER TABLE struggles MODIFY TTL toDateTime(ts) + INTERVAL ${retention} DAY DELETE`,
     });
+    // Retained rollback copies contain telemetry too; the same retention applies.
+    for (const table of ["events", "struggles"] as const) {
+      const backup = `${table}_before_reliable_delivery`;
+      const rs = await client.query({
+        query: "EXISTS TABLE {name:Identifier}",
+        query_params: { name: backup },
+        format: "JSONEachRow",
+      });
+      if (Number((await rs.json<{ result: number }>())[0]?.result)) {
+        await client.command({
+          query: `ALTER TABLE ${backup} MODIFY TTL toDateTime(${table === "events" ? "received_at" : "ts"}) + INTERVAL ${retention} DAY DELETE`,
+        });
+      }
+    }
     return applied;
   } finally {
     await client.close();

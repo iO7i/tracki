@@ -31,9 +31,9 @@ export class EventQueue {
   }
 
   enqueue(event: EventInput): void {
-    event = { ...event, eventId: event.eventId ?? defaultIdFactory("evt") };
+    const identified = { ...event, eventId: event.eventId ?? defaultIdFactory("evt") };
     this.identity.touchSession();
-    this.buffer.push(event);
+    this.buffer.push(identified);
     if (this.buffer.length >= FLUSH_SIZE) {
       void this.flush();
     } else if (!this.timer) {

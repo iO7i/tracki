@@ -12,6 +12,8 @@ export async function ensureInbox(sql: postgres.Sql = pg()): Promise<void> {
     PRIMARY KEY (project_id, event_id))`;
   await sql`CREATE INDEX IF NOT EXISTS telemetry_pending ON telemetry_inbox (available_at, event_time)
     WHERE completed_at IS NULL AND dead_at IS NULL`;
+  await sql`CREATE INDEX IF NOT EXISTS telemetry_project_order ON telemetry_inbox (project_id,event_time,event_id)
+    WHERE completed_at IS NULL AND dead_at IS NULL`;
   await sql`CREATE TABLE IF NOT EXISTS telemetry_state (
     key text PRIMARY KEY, value jsonb NOT NULL, expires_at timestamptz NOT NULL)`;
 }
@@ -33,4 +35,9 @@ export async function acceptEvents(
     }
     return accepted;
   }) as Promise<StoredEvent[]>;
+}
+
+export async function maintainInbox(sql: postgres.Sql = pg()): Promise<void> {
+  await sql`DELETE FROM telemetry_state WHERE expires_at < now()`;
+  await sql`UPDATE telemetry_inbox SET payload=NULL WHERE dead_at < now()-interval '7 days' AND payload IS NOT NULL`;
 }
