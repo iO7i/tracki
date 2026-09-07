@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   postgres@3.4.9:
-    hash: hjqizedlsz4stmwmofvxat2dyy
+    hash: ek5p7fgdv6kj5zr5wymddd2eu4
     path: patches/postgres@3.4.9.patch
 
 importers:
@@ -45,7 +45,7 @@ importers:
         version: 2.4.3
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(gel@2.2.0)(postgres@3.4.9(patch_hash=hjqizedlsz4stmwmofvxat2dyy))
+        version: 0.45.2(gel@2.2.0)(postgres@3.4.9(patch_hash=ek5p7fgdv6kj5zr5wymddd2eu4))
       ioredis:
         specifier: ^5.4.2
         version: 5.11.1
@@ -57,7 +57,7 @@ importers:
         version: 4.13.0(next@15.5.19(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       postgres:
         specifier: ^3.4.5
-        version: 3.4.9(patch_hash=hjqizedlsz4stmwmofvxat2dyy)
+        version: 3.4.9(patch_hash=ek5p7fgdv6kj5zr5wymddd2eu4)
       react:
         specifier: ^19.0.0
         version: 19.2.7
@@ -127,7 +127,7 @@ importers:
         version: 5.11.1
       postgres:
         specifier: ^3.4.5
-        version: 3.4.9(patch_hash=hjqizedlsz4stmwmofvxat2dyy)
+        version: 3.4.9(patch_hash=ek5p7fgdv6kj5zr5wymddd2eu4)
     devDependencies:
       '@tracki/mobile-core':
         specifier: workspace:*
@@ -5062,10 +5062,10 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.22.4
 
-  drizzle-orm@0.45.2(gel@2.2.0)(postgres@3.4.9(patch_hash=hjqizedlsz4stmwmofvxat2dyy)):
+  drizzle-orm@0.45.2(gel@2.2.0)(postgres@3.4.9(patch_hash=ek5p7fgdv6kj5zr5wymddd2eu4)):
     optionalDependencies:
       gel: 2.2.0
-      postgres: 3.4.9(patch_hash=hjqizedlsz4stmwmofvxat2dyy)
+      postgres: 3.4.9(patch_hash=ek5p7fgdv6kj5zr5wymddd2eu4)
 
   dunder-proto@1.0.1:
     dependencies:
@@ -6049,7 +6049,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  postgres@3.4.9(patch_hash=hjqizedlsz4stmwmofvxat2dyy): {}
+  postgres@3.4.9(patch_hash=ek5p7fgdv6kj5zr5wymddd2eu4): {}
 
   pretty-format@29.7.0:
     dependencies:

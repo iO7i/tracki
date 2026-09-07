@@ -14,6 +14,39 @@ index 07f6716702ac888215c86ad6e0071aaf55ae519c..83e09309ef90adec057abb7c146beb2a
      if (terminated)
        return queryError(q, Errors.connection('CONNECTION_DESTROYED', options))
  
+diff --git a/cjs/src/index.js b/cjs/src/index.js
+index f09c61c7e998f411560b95c9a8e1ed6a97972c11..6301c21e0de54948563121d4d2d7ebf4756d079c 100644
+--- a/cjs/src/index.js
++++ b/cjs/src/index.js
+@@ -236,13 +236,18 @@ function Postgres(a, b) {
+     const queries = Queue()
+     let savepoints = 0
+       , connection
++      , closedError
+       , prepare = null
+ 
+     try {
+       await sql.unsafe('begin ' + options.replace(/[^a-z ]/ig, ''), [], { onexecute }).execute()
+       return await Promise.race([
+         scope(connection, fn),
+-        new Promise((_, reject) => connection.onclose = reject)
++        new Promise((_, reject) => connection.onclose = error => {
++          closedError = error
++          while (queries.length) queries.shift().reject(error)
++          reject(error)
++        })
+       ])
+     } catch (error) {
+       throw error
+@@ -290,6 +295,8 @@ function Postgres(a, b) {
+ 
+       function handler(q) {
+         q.catch(e => uncaughtError || (uncaughtError = e))
++        if (closedError)
++          return q.reject(closedError)
+         c.queue === full
+           ? queries.push(q)
+           : c.execute(q) || move(c, full)
 diff --git a/src/connection.js b/src/connection.js
 index 1b1cccde43b4570d5d071d6ffaab2669b3c2065a..fbfc1dc5ed5d91758c743f2fcc25f7ee13995b77 100644
 --- a/src/connection.js
@@ -30,3 +63,36 @@ index 1b1cccde43b4570d5d071d6ffaab2669b3c2065a..fbfc1dc5ed5d91758c743f2fcc25f7ee
      if (terminated)
        return queryError(q, Errors.connection('CONNECTION_DESTROYED', options))
  
+diff --git a/src/index.js b/src/index.js
+index c7fba3dace20173f4cb13f3f138bb6d213b43683..f913cdef5a30f105d5ea5bed9068fa91e2a37314 100644
+--- a/src/index.js
++++ b/src/index.js
+@@ -236,13 +236,18 @@ function Postgres(a, b) {
+     const queries = Queue()
+     let savepoints = 0
+       , connection
++      , closedError
+       , prepare = null
+ 
+     try {
+       await sql.unsafe('begin ' + options.replace(/[^a-z ]/ig, ''), [], { onexecute }).execute()
+       return await Promise.race([
+         scope(connection, fn),
+-        new Promise((_, reject) => connection.onclose = reject)
++        new Promise((_, reject) => connection.onclose = error => {
++          closedError = error
++          while (queries.length) queries.shift().reject(error)
++          reject(error)
++        })
+       ])
+     } catch (error) {
+       throw error
+@@ -290,6 +295,8 @@ function Postgres(a, b) {
+ 
+       function handler(q) {
+         q.catch(e => uncaughtError || (uncaughtError = e))
++        if (closedError)
++          return q.reject(closedError)
+         c.queue === full
+           ? queries.push(q)
+           : c.execute(q) || move(c, full)
