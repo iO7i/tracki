@@ -1,0 +1,1 @@
+ALTER TABLE "wa_conversations" DROP COLUMN "assignee";

@@ -1,0 +1,26 @@
+{
+  "description": "Channel CTA request bodies. Run AFTER the journey-batch script (user identified, session sess_1, current screen /Checkout, locale ar). Compare as parsed JSON.",
+  "whatsappHandoff": {
+    "url": "/v1/handoff",
+    "body": {
+      "key": "pk_conformance",
+      "anonId": "anon_1",
+      "sessionId": "sess_1",
+      "path": "/Checkout",
+      "locale": "ar",
+      "platform": "ios"
+    }
+  },
+  "chatFirstTurn": {
+    "url": "/v1/chat",
+    "messageUsed": "كيف أستلم الرمز؟",
+    "body": {
+      "key": "pk_conformance",
+      "anonId": "anon_1",
+      "sessionId": "sess_1",
+      "userId": "user_42",
+      "message": "كيف أستلم الرمز؟",
+      "path": "/Checkout"
+    }
+  }
+}

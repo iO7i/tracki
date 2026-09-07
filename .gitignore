@@ -1,0 +1,22 @@
+node_modules/
+.next/
+dist/
+.turbo/
+*.tsbuildinfo
+
+# env — ignore every .env* except the committed *.example templates
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# testing
+coverage/
+playwright-report/
+test-results/
+e2e/.auth/
+
+# misc
+.DS_Store
+Thumbs.db
+*.log

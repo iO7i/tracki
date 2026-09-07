@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@source "../../../../packages/ui/src";
+
+/* Class-based dark mode (toggleable), not OS-forced — so the default is a clean,
+   professional light theme and users opt into dark. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Brand-tuned shadows: soft, low-spread, cool-tinted — the "lift" that makes
+     surfaces feel layered rather than flat. */
+  --shadow-xs: 0 1px 2px 0 rgb(24 24 27 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(24 24 27 / 0.06), 0 1px 2px -1px rgb(24 24 27 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(24 24 27 / 0.08), 0 2px 6px -2px rgb(24 24 27 / 0.05);
+  --shadow-lg: 0 12px 28px -6px rgb(24 24 27 / 0.12), 0 4px 10px -4px rgb(24 24 27 / 0.06);
+}
+
+:root {
+  color-scheme: light;
+}
+.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings: slightly tighter tracking reads more refined. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.011em;
+  }
+
+  ::selection {
+    @apply bg-blue-500/20 text-zinc-900 dark:text-zinc-50;
+  }
+
+  /* A consistent, unobtrusive focus ring everywhere keyboard users land. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-500;
+  }
+
+  /* Quiet, modern scrollbars (cosmetic; logical-safe). zinc-300 / zinc-700. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d8 transparent;
+  }
+  .dark * {
+    scrollbar-color: #3f3f46 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full border-4 border-solid border-transparent bg-zinc-300 bg-clip-padding dark:bg-zinc-700;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-zinc-400 dark:bg-zinc-600;
+  }
+}
+
+@layer components {
+  /* Animated entrance for surfaces — subtle, never distracting. */
+  .animate-rise {
+    animation: rise 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* New live row: slide in from the top, then a brief brand-tinted flash that
+     fades to transparent — draws the eye to just-arrived struggles. */
+  .animate-feed-in {
+    animation: feed-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both, feed-flash 1.6s ease-out 0.1s both;
+  }
+  @keyframes feed-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes feed-flash {
+    0% {
+      background-color: rgb(59 130 246 / 0.12);
+    }
+    100% {
+      background-color: rgb(59 130 246 / 0);
+    }
+  }
+
+  /* Soft radar ping for the live indicator dot. */
+  .animate-ping-slow {
+    animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+  @keyframes ping-slow {
+    0% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    75%,
+    100% {
+      transform: scale(2.4);
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise,
+    .animate-feed-in,
+    .animate-ping-slow {
+      animation: none;
+    }
+  }
+}

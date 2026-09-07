@@ -1,0 +1,16 @@
+# Caddy auto-TLS reverse proxy (Let's Encrypt). Domains come from .env.prod
+# (APP_DOMAIN, INGEST_DOMAIN). Both must have public DNS A/AAAA records pointing
+# at this host, and ports 80+443 reachable, for certificates to issue.
+
+# Operator dashboard.
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy dashboard:3000
+}
+
+# Public ingest origin: snippet (/tracki.js), /v1/* APIs, WhatsApp webhook.
+# CORS is handled by the ingest service itself (open for /v1 on customer sites).
+{$INGEST_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy ingest:4000
+}

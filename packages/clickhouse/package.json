@@ -1,0 +1,23 @@
+{
+  "name": "@tracki/clickhouse",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./migrate": "./src/migrate.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "ch:migrate": "tsx src/migrate.ts"
+  },
+  "dependencies": {
+    "@clickhouse/client": "^1.10.0",
+    "@tracki/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

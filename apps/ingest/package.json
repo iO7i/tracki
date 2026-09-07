@@ -1,0 +1,32 @@
+{
+  "name": "@tracki/ingest",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "check-types": "tsc --noEmit",
+    "test": "vitest run",
+    "bench": "tsx bench/load.ts"
+  },
+  "dependencies": {
+    "@clickhouse/client": "^1.10.0",
+    "@fastify/cors": "^10.0.1",
+    "@tracki/ai": "workspace:*",
+    "@tracki/clickhouse": "workspace:*",
+    "@tracki/shared": "workspace:*",
+    "@tracki/whatsapp": "workspace:*",
+    "fastify": "^5.2.1",
+    "ioredis": "^5.4.2",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "@tracki/mobile-core": "workspace:*",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.0"
+  }
+}

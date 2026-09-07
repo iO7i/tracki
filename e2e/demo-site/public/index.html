@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>متجر تراكي التجريبي</title>
+    <link rel="stylesheet" href="/style.css" />
+    <!--
+      Tracki snippet. data-key is replaced at runtime from ?key=pk_… so the
+      same fixture works for any project. data-endpoint points at local ingest.
+    -->
+    <script>
+      (function () {
+        var params = new URLSearchParams(location.search);
+        var key = params.get("key") || "pk_demo_replace_me";
+        var endpoint = params.get("endpoint") || "http://localhost:4000/v1/events";
+        // Loader stub so calls before load are queued.
+        window.tracki = window.tracki || { q: [] };
+        ["track", "identify", "page"].forEach(function (m) {
+          window.tracki[m] =
+            window.tracki[m] ||
+            function () {
+              window.tracki.q.push([m].concat([].slice.call(arguments)));
+            };
+        });
+        var s = document.createElement("script");
+        s.async = true;
+        s.src = (params.get("src") || "http://localhost:4000/tracki.js");
+        s.setAttribute("data-key", key);
+        s.setAttribute("data-endpoint", endpoint);
+        document.head.appendChild(s);
+      })();
+    </script>
+  </head>
+  <body>
+    <header>
+      <h1>متجر تراكي</h1>
+      <nav>
+        <a href="/" data-nav="home">الرئيسية</a>
+        <a href="/products" data-nav="products">المنتجات</a>
+        <a href="/cart" data-nav="cart">السلة</a>
+        <button id="faq-btn">مساعدة</button>
+        <button id="login-btn">تسجيل الدخول</button>
+      </nav>
+    </header>
+
+    <main id="app"></main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
