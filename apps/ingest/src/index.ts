@@ -1,6 +1,7 @@
 import { assertLLM } from "@tracki/ai";
 import { assertConfig } from "@tracki/whatsapp";
 import { config } from "./config.js";
+import { ensureInbox } from "./inbox";
 import { closePg } from "./pg.js";
 import { closeRedis } from "./redis.js";
 import { buildServer } from "./server.js";
@@ -9,7 +10,8 @@ import { startWorker } from "./worker.js";
 async function main(): Promise<void> {
   assertConfig(); // fail closed on partial Meta config (Audit 07 B1/B2)
   assertLLM(); // fail closed: require a real LLM in prod, not the heuristic (Audit 00-07 X1)
-  let worker: { stop: () => void } | null = null;
+  await ensureInbox();
+  let worker: { stop: () => Promise<void> } | null = null;
   if (config.runWorker) worker = startWorker();
 
   let app: Awaited<ReturnType<typeof buildServer>> | null = null;
@@ -20,7 +22,7 @@ async function main(): Promise<void> {
   }
 
   const shutdown = async () => {
-    worker?.stop();
+    await worker?.stop();
     await app?.close();
     await closeRedis();
     await closePg();

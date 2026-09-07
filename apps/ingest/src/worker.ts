@@ -1,129 +1,101 @@
 import { createClickHouse, insertEvents, insertStruggles } from "@tracki/clickhouse";
-import type { StoredEvent } from "@tracki/shared";
-import { computeAssist } from "./assist.js";
-import { REDIS_KEYS } from "./config.js";
-import { detectBatch } from "./detector.js";
-import { redis } from "./redis.js";
-import { RedisStateStore } from "./state.js";
+import type { StoredEvent, StruggleDetection } from "@tracki/shared";
+import type postgres from "postgres";
+import { computeAssist } from "./assist";
+import { REDIS_KEYS } from "./config";
+import { detectBatch } from "./detector";
+import { DurableStateStore } from "./durable-state";
+import { pg } from "./pg";
+import { redis } from "./redis";
 
-const BATCH = 1000;
-const IDLE_MS = 1000;
-
-function parse(items: string[]): StoredEvent[] {
-  const out: StoredEvent[] = [];
-  for (const item of items) {
-    try {
-      out.push(JSON.parse(item) as StoredEvent);
-    } catch {
-      /* skip malformed */
-    }
-  }
-  return out;
+export interface WorkerIO {
+  events(events: StoredEvent[]): Promise<void>;
+  struggles(struggles: StruggleDetection[]): Promise<void>;
+  beforeAck?(tx: postgres.TransactionSql): Promise<void>;
 }
 
-/**
- * ClickHouse writer loop with a reliable-queue pattern (Audit M4): events are
- * atomically moved buffer → processing, inserted, then trimmed from processing
- * only on success. A crash mid-insert leaves the batch in `processing`, which
- * is recovered back to the buffer on next startup — no silent loss. Insert
- * failures dead-letter the batch. Runs in-process (dev) or standalone (prod).
+/** Row locks are ownership; connection death rolls back and releases work immediately.
+ * Per-project transaction advisory locks serialize detection state across sessions.
+ * CH inserts may repeat after a crash, with stable IDs and explicit read deduplication.
  */
-export function startWorker(): { stop: () => void } {
+export async function processOne(sql: postgres.Sql, io: WorkerIO): Promise<boolean> {
+  let owned: { project: string; id: string } | undefined;
+  try {
+    return (await sql.begin(async (tx) => {
+      const rows = await tx`SELECT * FROM telemetry_inbox
+        WHERE completed_at IS NULL AND dead_at IS NULL AND available_at <= now()
+        ORDER BY event_time,event_id LIMIT 1 FOR UPDATE SKIP LOCKED`;
+      const row = rows[0];
+      if (!row) return false;
+      const lock =
+        await tx`SELECT pg_try_advisory_xact_lock(hashtextextended(${row.project_id},0)) AS ok`;
+      if (!lock[0]?.ok) return false;
+      owned = { project: row.project_id as string, id: row.event_id as string };
+      const e = row.payload as StoredEvent;
+      if (
+        !e ||
+        e.project_id !== row.project_id ||
+        e.org_id !== row.org_id ||
+        e.event_id !== row.event_id
+      )
+        throw new Error("invalid inbox record");
+      const state = new DurableStateStore(tx, e.ts);
+      // Late arrivals remain visible in analytics, but never rewrite prior detections.
+      const watermarkKey = `watermark:${e.org_id}:${e.project_id}:${e.anon_id}`;
+      const watermark = Number((await state.read(watermarkKey)) ?? 0);
+      const detections = e.ts < watermark ? [] : await detectBatch(state, [e]);
+      await state.write(watermarkKey, Math.max(watermark, e.ts));
+      await io.events([e]);
+      await io.struggles(detections);
+      await io.beforeAck?.(tx);
+      await tx`UPDATE telemetry_inbox SET completed_at=now(),payload=NULL WHERE project_id=${e.project_id} AND event_id=${e.event_id}`;
+      return true;
+    })) as boolean;
+  } catch {
+    if (owned) {
+      await sql`UPDATE telemetry_inbox SET attempts=attempts+1,
+        available_at=now()+least(300,power(2,attempts+1))*interval '1 second',
+        dead_at=CASE WHEN attempts+1>=5 THEN now() ELSE NULL END
+        WHERE project_id=${owned.project} AND event_id=${owned.id} AND completed_at IS NULL AND dead_at IS NULL`;
+    }
+    // Do not log provider errors/payloads; dead-letter IDs are available to operators.
+    console.error("telemetry processing failed; retry scheduled or item dead-lettered");
+    return false;
+  }
+}
+
+export function startWorker(): { stop: () => Promise<void> } {
   const ch = createClickHouse();
-  const detectorStore = new RedisStateStore();
   let running = true;
-  let timer: ReturnType<typeof setTimeout> | null = null;
-
-  // Run struggle detection over an already-inserted batch. Failures here never
-  // affect event durability (events are already in ClickHouse).
-  const runDetection = async (events: StoredEvent[]) => {
-    try {
-      const struggles = await detectBatch(detectorStore, events);
-      if (struggles.length === 0) return;
-      await insertStruggles(ch, struggles);
-      const pipe = redis().pipeline();
-      for (const s of struggles) {
-        pipe.publish(REDIS_KEYS.struggleChannel(s.project_id), JSON.stringify(s));
-      }
-      await pipe.exec();
-      // implementation (S3): each struggle may arm a Live Assist for the session,
-      // delivered on the visitor's next event flush. Off the ack path.
-      for (const s of struggles) await computeAssist(ch, s);
-    } catch (err) {
-      console.error("struggle detection failed", err);
-    }
-  };
-
-  // Recover any batch left in `processing` by a previous crash (Audit B1).
-  // We re-insert the events idempotently (events is ReplacingMergeTree keyed on
-  // event_id) but DO NOT re-run detection: the pre-crash run already emitted any
-  // struggles, and re-detecting would duplicate them once debounce flags expire.
-  // (A crash that happened *before* the first insert means that batch misses
-  // detection — a rare, bounded miss, far preferable to corrupt counts.)
-  const recover = async () => {
-    try {
-      const orphaned = await redis().lrange(REDIS_KEYS.processing, 0, -1);
-      if (orphaned.length > 0) {
-        await insertEvents(ch, parse(orphaned));
-        await redis().del(REDIS_KEYS.processing);
-        console.info(
-          `recovered ${orphaned.length} orphaned events (re-inserted, detection skipped)`,
-        );
-      }
-    } catch (err) {
-      console.error("processing recovery failed", err);
-    }
-  };
-
-  const drainToProcessing = async (): Promise<string[]> => {
-    const moved: string[] = [];
-    // Atomically move up to BATCH items from buffer head to processing tail.
-    for (let i = 0; i < BATCH; i++) {
-      const item = (await redis().lmove(
-        REDIS_KEYS.buffer,
-        REDIS_KEYS.processing,
-        "LEFT",
-        "RIGHT",
-      )) as string | null;
-      if (item == null) break;
-      moved.push(item);
-    }
-    return moved;
-  };
-
-  const tick = async () => {
-    if (!running) return;
-    try {
-      const raw = await drainToProcessing();
-      if (raw.length > 0) {
-        const events = parse(raw);
-        try {
-          await insertEvents(ch, events);
-          await runDetection(events);
-        } catch (err) {
-          console.error("ClickHouse insert failed; dead-lettering batch", err);
-          await redis().rpush(REDIS_KEYS.dead, ...raw);
+  const sql = pg();
+  const loop = (async () => {
+    while (running) {
+      const detections: StruggleDetection[] = [];
+      const done = await processOne(sql, {
+        events: (e) => insertEvents(ch, e),
+        struggles: async (s) => {
+          await insertStruggles(ch, s);
+          detections.push(...s);
+        },
+      });
+      // Optional live delivery is best effort; durable analytics are already committed.
+      if (done)
+        for (const s of detections) {
+          try {
+            await redis().publish(REDIS_KEYS.struggleChannel(s.project_id), JSON.stringify(s));
+            await computeAssist(ch, s);
+          } catch {
+            console.error("optional live assistance unavailable");
+          }
         }
-        // Only now clear what we took from processing (we drained it whole).
-        await redis().del(REDIS_KEYS.processing);
-        if (running) timer = setTimeout(tick, 0);
-        return;
-      }
-    } catch (err) {
-      console.error("worker tick error", err);
+      if (!done) await new Promise((resolve) => setTimeout(resolve, 250));
     }
-    if (running) timer = setTimeout(tick, IDLE_MS);
-  };
-
-  void recover().then(() => {
-    if (running) void tick();
-  });
-
+  })();
   return {
-    stop() {
+    async stop() {
       running = false;
-      if (timer) clearTimeout(timer);
-      void ch.close();
+      await loop;
+      await ch.close();
     },
   };
 }
