@@ -30,6 +30,10 @@ export async function migrate(): Promise<string[]> {
     const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith(".sql")).sort();
     for (const file of files) {
       if (existing.has(file)) continue;
+      if (file === "006_reliable_delivery.sql") {
+        await upgradeReplacing(client, "events", "event_id");
+        await upgradeReplacing(client, "struggles", "struggle_id");
+      }
       // Preserve historical SQL unchanged but never execute its destructive DROP.
       if (file === "003_events_dedup.sql") {
         await upgradeReplacing(client, "events", "event_id");
@@ -59,7 +63,6 @@ export async function migrate(): Promise<string[]> {
       });
       applied.push(file);
     }
-    await upgradeReplacing(client, "struggles", "struggle_id");
     await client.command({
       query: `ALTER TABLE events MODIFY TTL toDateTime(received_at) + INTERVAL ${retention} DAY DELETE`,
     });
