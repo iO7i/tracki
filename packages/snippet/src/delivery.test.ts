@@ -88,6 +88,15 @@ describe("resilient browser delivery", () => {
     for (let i = 0; i < 1000; i++) q.enqueue(event());
     expect(q.size).toBeLessThanOrEqual(200);
   });
+  it("bounds persistent UTF-8 bytes including multibyte text", () => {
+    const q = new EventQueue("pk_x", "/events", () => new Promise(() => {}), "granted", {
+      storage: localStorage,
+    });
+    for (let i = 0; i < 100; i++) q.enqueue({ ...event(), props: { text: "مرحبا".repeat(500) } });
+    const raw = localStorage.getItem("tracki_delivery:pk_x:/events") ?? "";
+    expect(new TextEncoder().encode(raw).byteLength).toBeLessThanOrEqual(48_000);
+    expect(q.size).toBeGreaterThan(0);
+  });
   it("HTTP errors and network failures are not acknowledgments", async () => {
     vi.stubGlobal(
       "fetch",

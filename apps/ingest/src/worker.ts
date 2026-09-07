@@ -59,10 +59,16 @@ export async function processOne(sql: postgres.Sql, io: WorkerIO): Promise<boole
     })) as boolean;
   } catch {
     if (owned) {
-      await sql`UPDATE telemetry_inbox SET attempts=attempts+1,
+      try {
+        await sql`UPDATE telemetry_inbox SET attempts=attempts+1,
         available_at=now()+least(300,power(2,attempts+1))*interval '1 second',
         dead_at=CASE WHEN attempts+1>=5 THEN now() ELSE NULL END
         WHERE project_id=${owned.project} AND event_id=${owned.id} AND completed_at IS NULL AND dead_at IS NULL`;
+      } catch {
+        // Database outage must not terminate the worker loop. The rolled-back item
+        // remains pending; failure accounting resumes when PostgreSQL recovers.
+        console.error("telemetry retry accounting unavailable; item remains pending");
+      }
     }
     // Do not log provider errors/payloads; dead-letter IDs are available to operators.
     console.error("telemetry processing failed; retry scheduled or item dead-lettered");

@@ -2,7 +2,7 @@ import type { StoredEvent } from "@tracki/shared";
 import type postgres from "postgres";
 import { pg } from "./pg";
 
-/** Durable ledger: completed identities remain until their project is deleted. */
+/** Durable ledger: completed identities are retained; project erasure requires operator cleanup. */
 export async function ensureInbox(sql: postgres.Sql = pg()): Promise<void> {
   await sql`CREATE TABLE IF NOT EXISTS telemetry_inbox (
     project_id text NOT NULL, event_id text NOT NULL, org_id text NOT NULL,

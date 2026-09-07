@@ -35,6 +35,45 @@ test("signup → create org → create project → snippet tag visible (EN)", as
   const snippet = page.locator("code");
   await expect(snippet).toContainText('data-key="pk_');
   await expect(snippet).toContainText("<script async");
+  const publicKey = (await snippet.textContent())?.match(/data-key="([^"]+)"/)?.[1];
+  expect(publicKey).toBeTruthy();
+  const attempts: Array<{ events: Array<{ eventId: string }> }> = [];
+  await page.route("**/v1/events", async (route) => {
+    attempts.push(route.request().postDataJSON());
+    if (attempts.length === 1) await route.fulfill({ status: 503, body: "injected outage" });
+    else await route.continue();
+  });
+  // Load the production-built collector. First HTTP delivery fails; the retry
+  // goes to the real ingestion API and its PostgreSQL inbox.
+  await page.evaluate(async (key) => {
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "http://localhost:4000/tracki.js";
+      script.dataset.key = key;
+      script.dataset.consent = "granted";
+      script.dataset.chat = "off";
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("collector unavailable"));
+      document.head.append(script);
+    });
+  }, publicKey ?? "");
+  const accepted = await page.waitForResponse(
+    (response) => response.url().endsWith("/v1/events") && response.status() === 202,
+    { timeout: 20_000 },
+  );
+  expect(await accepted.json()).toMatchObject({ ok: true });
+  expect(attempts.length).toBeGreaterThanOrEqual(2);
+  expect(attempts[1]?.events.map((event) => event.eventId)).toEqual(
+    attempts[0]?.events.map((event) => event.eventId),
+  );
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const key = Object.keys(localStorage).find((k) => k.startsWith("tracki_delivery:"));
+        return key ? JSON.parse(localStorage.getItem(key) ?? "[]").length : 0;
+      }),
+    )
+    .toBe(0);
 });
 
 test("locale switcher flips direction", async ({ page }) => {

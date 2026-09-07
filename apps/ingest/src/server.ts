@@ -66,6 +66,7 @@ export function buildServer(): FastifyInstance {
 
   // Audit N4: health checks all three dependencies, not just Redis.
   const healthCh = createClickHouse();
+  app.addHook("onClose", async () => healthCh.close());
   app.get("/health", async () => {
     const checks = { redis: false, postgres: false, clickhouse: false };
     await Promise.all([

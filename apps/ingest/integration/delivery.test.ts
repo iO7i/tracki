@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { createClickHouse, insertEvents, insertStruggles } from "@tracki/clickhouse";
 import { migrate } from "@tracki/clickhouse/migrate";
 import type { EventBatch, StoredEvent } from "@tracki/shared";
@@ -59,6 +60,18 @@ async function drain() {
 beforeAll(async () => {
   await sql`SELECT 1`;
   await redis().ping();
+  // Begin with the established, populated MergeTree schema, not just empty tables.
+  for (const name of ["001_events.sql", "002_struggles.sql"]) {
+    const ddl = await readFile(
+      new URL(`../../../packages/clickhouse/src/migrations/${name}`, import.meta.url),
+      "utf8",
+    );
+    await ch.command({ query: ddl.trim().replace(/;$/, "") });
+  }
+  await ch.command({
+    query:
+      "INSERT INTO events (org_id,project_id,anon_id,event_id,ts,received_at) VALUES ('upgrade','upgrade','upgrade','legacy',now(),now())",
+  });
   await migrate();
   await ensureInbox(sql);
   // Cache seeds avoid unrelated account setup, while /v1/events still exercises real resolution/storage.
@@ -264,5 +277,16 @@ describe("real ingestion and worker contract", () => {
     expect(await count("events", input.anonId)).toBe(1);
     const result = await ch.query({ query: "SHOW CREATE TABLE events", format: "JSONEachRow" });
     expect(JSON.stringify(await result.json())).toContain("TTL");
+    const legacy = await ch.query({
+      query: "SELECT count() AS n FROM events WHERE project_id='upgrade' AND event_id='legacy'",
+      format: "JSONEachRow",
+    });
+    expect(Number((await legacy.json<{ n: string }>())[0]?.n)).toBe(1);
+    const backup = await ch.query({
+      query:
+        "SELECT count() AS n FROM events_before_reliable_delivery WHERE project_id='upgrade' AND event_id='legacy'",
+      format: "JSONEachRow",
+    });
+    expect(Number((await backup.json<{ n: string }>())[0]?.n)).toBe(1);
   });
 });

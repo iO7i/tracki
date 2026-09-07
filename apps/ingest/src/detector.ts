@@ -43,8 +43,8 @@ const PERM_MIN = 2; // same permission
 // part of onboarding; checkout/loan/kyc abandons stay events + revenue signals).
 const ONBOARDING_FLOWS = new Set(["onboarding", "registration"]);
 
-// Tags the snippet's click `closest()` resolves to — anything else the user
-// clicked is non-interactive (a dead click) (implementation).
+// Native controls only. Other tags may still have event handlers; this classifier
+// measures repeated non-control clicks, not whether the application responded.
 const INTERACTIVE = new Set([
   "a",
   "button",
@@ -165,8 +165,7 @@ export async function detectBatch(
         count >= RAGE_MIN_CLICKS &&
         (await store.setFlagIfAbsent(key(e, "deb", "rage", s), DEBOUNCE_MS))
       ) {
-        // Non-interactive target ⇒ the user is clicking dead UI (dead_click);
-        // interactive ⇒ classic rage on a real control.
+        // Preserve the legacy dead_click wire name without asserting unresponsiveness.
         const el = tag || "element";
         out.push(
           INTERACTIVE.has(tag)

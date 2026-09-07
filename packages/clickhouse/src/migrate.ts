@@ -12,6 +12,9 @@ const MIGRATIONS_DIR = join(here, "migrations");
  * on `;`. Idempotent — already-applied files are skipped.
  */
 export async function migrate(): Promise<string[]> {
+  const retention = Number(process.env.TELEMETRY_RETENTION_DAYS ?? 90);
+  if (!Number.isInteger(retention) || retention < 1 || retention > 3650)
+    throw new Error("invalid telemetry retention");
   const client = createClickHouse();
   const applied: string[] = [];
   try {
@@ -57,9 +60,6 @@ export async function migrate(): Promise<string[]> {
       applied.push(file);
     }
     await upgradeReplacing(client, "struggles", "struggle_id");
-    const retention = Number(process.env.TELEMETRY_RETENTION_DAYS ?? 90);
-    if (!Number.isInteger(retention) || retention < 1 || retention > 3650)
-      throw new Error("invalid telemetry retention");
     await client.command({
       query: `ALTER TABLE events MODIFY TTL toDateTime(received_at) + INTERVAL ${retention} DAY DELETE`,
     });
