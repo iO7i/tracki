@@ -23,5 +23,10 @@
     "@biomejs/biome": "^1.9.4",
     "turbo": "^2.4.0",
     "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "postgres@3.4.9": "patches/postgres@3.4.9.patch"
+    }
   }
 }

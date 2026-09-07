@@ -1,0 +1,28 @@
+diff --git a/cjs/src/connection.js b/cjs/src/connection.js
+index 07f6716702ac888215c86ad6e0071aaf55ae519c..e8ed9b3273261cc7f8896c27204f0449504ed5fa 100644
+--- a/cjs/src/connection.js
++++ b/cjs/src/connection.js
+@@ -154,6 +154,9 @@ function Connection(options, queues = {}, { onopen = noop, onend = noop, onclose
+   }
+ 
+   function execute(q) {
++    if (!socket || socket.destroyed)
++      return queryError(q, Errors.connection('CONNECTION_CLOSED', options))
++
+     if (terminated)
+       return queryError(q, Errors.connection('CONNECTION_DESTROYED', options))
+ 
+diff --git a/src/connection.js b/src/connection.js
+index 1b1cccde43b4570d5d071d6ffaab2669b3c2065a..14caa060fed49f534764f472136bbb979f563c9e 100644
+--- a/src/connection.js
++++ b/src/connection.js
+@@ -154,6 +154,9 @@ function Connection(options, queues = {}, { onopen = noop, onend = noop, onclose
+   }
+ 
+   function execute(q) {
++    if (!socket || socket.destroyed)
++      return queryError(q, Errors.connection('CONNECTION_CLOSED', options))
++
+     if (terminated)
+       return queryError(q, Errors.connection('CONNECTION_DESTROYED', options))
+ 
