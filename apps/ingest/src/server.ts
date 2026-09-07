@@ -243,7 +243,7 @@ export function buildServer(): FastifyInstance {
     }
     const events = await acceptEvents(normalized);
 
-    // Full rows go to the CH buffer; the live channel gets only a projection —
+    // Full rows enter the durable inbox; the live channel gets only a projection —
     // never the raw row (Audit M1: no UA / org_id / received_at to the client).
     const channel = REDIS_KEYS.liveChannel(ref.projectId);
     const pipeline = redis().pipeline();

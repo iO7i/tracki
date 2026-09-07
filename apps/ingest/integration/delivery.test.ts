@@ -189,26 +189,29 @@ describe("real ingestion and worker contract", () => {
     expect(await count("struggles", input.anonId)).toBe(1);
   });
   it("terminated worker connection releases ownership for another worker", async () => {
-    const input = batch([8000]);
-    await acceptEvents(normalizeBatch(input, ref, "", Date.now()), sql);
-    let report: (pid: number) => void = () => {};
-    const ready = new Promise<number>((r) => {
-      report = r;
-    });
-    const first = processOne(sql, {
-      ...io,
-      beforeAck: async (tx) => {
-        const rows = await tx`SELECT pg_backend_pid() AS pid`;
-        report(Number(rows[0]?.pid));
-        await tx`SELECT pg_sleep(30)`;
-      },
-    });
-    const pid = await ready;
-    await sql`SELECT pg_terminate_backend(${pid})`;
-    expect(await first).toBe(false);
-    await sql`UPDATE telemetry_inbox SET available_at=now() WHERE project_id=${project} AND completed_at IS NULL`;
-    expect(await processOne(sql, io)).toBe(true);
-    expect(await count("events", input.anonId)).toBe(1);
+    // Exceed the default pool size: recovery must not leak closed pool slots.
+    for (let failure = 0; failure < 12; failure++) {
+      const input = batch([8000]);
+      await acceptEvents(normalizeBatch(input, ref, "", Date.now()), sql);
+      let report: (pid: number) => void = () => {};
+      const ready = new Promise<number>((r) => {
+        report = r;
+      });
+      const first = processOne(sql, {
+        ...io,
+        beforeAck: async (tx) => {
+          const rows = await tx`SELECT pg_backend_pid() AS pid`;
+          report(Number(rows[0]?.pid));
+          await tx`SELECT pg_sleep(30)`;
+        },
+      });
+      const pid = await ready;
+      await sql`SELECT pg_terminate_backend(${pid})`;
+      expect(await first).toBe(false);
+      await sql`UPDATE telemetry_inbox SET available_at=now() WHERE project_id=${project} AND completed_at IS NULL`;
+      expect(await processOne(sql, io)).toBe(true);
+      expect(await count("events", input.anonId)).toBe(1);
+    }
   });
   it("same session and client event IDs in another project remain isolated", async () => {
     const otherProject = randomUUID();
