@@ -1,6 +1,6 @@
 # Tracki
 
-Arabic-first behavioral intelligence for websites and mobile applications.
+Behavioral intelligence for websites and mobile applications.
 
 Created by **Hosam Talbi**.
 
