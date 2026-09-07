@@ -108,7 +108,7 @@ export function normalizeBatch(
       url: scrubString(e.url),
       referrer: scrubString(e.referrer),
       props: props ? scrubSerialized(JSON.stringify(props)) : "{}",
-      ua: coarseUa,
+      ua: scrubString(coarseUa),
       platform,
       app_version: scrubString(appVersion),
       device_model: scrubString(deviceModel),

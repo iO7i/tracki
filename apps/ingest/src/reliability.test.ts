@@ -131,6 +131,17 @@ describe("normalization and detection regression", () => {
   });
 });
 describe("privacy regressions", () => {
+  it("masks mobile device metadata as well as custom properties", () => {
+    const input = batch();
+    input.device = {
+      platform: "ios",
+      osVersion: "person@example.test",
+      appVersion: "person@example.test",
+      model: "person@example.test",
+    };
+    const result = normalizeBatch(input, ref, "", now)[0];
+    expect(JSON.stringify(result)).not.toContain("person@example.test");
+  });
   it.each([
     "PASSWORD",
     "passwd",

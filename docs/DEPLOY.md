@@ -1,5 +1,7 @@
 # Deploying Tracki
 
+For an existing installation, follow [the telemetry cutover procedure](RELIABILITY.md#existing-deployment-cutover-and-retention) before running an update or migrations. Stop producers, drain the legacy queue, and stop old workers before copying tables. The commands below are not a zero-downtime upgrade procedure.
+
 This repo ships a **self-contained production stack** you can run on any single
 Linux host with Docker. One image runs the API/worker, the dashboard, and the
 migrations; Postgres + ClickHouse + Redis run as internal services; Caddy

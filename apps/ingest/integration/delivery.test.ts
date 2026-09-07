@@ -223,6 +223,34 @@ describe("real ingestion and worker contract", () => {
     expect(rows.length).toBe(2);
     expect(rows[0]?.event_id).not.toBe(rows[1]?.event_id);
   });
+  it("session detector windows cannot combine across sessions or tenants", async () => {
+    const input = batch([7500, 8000]);
+    const otherProject = randomUUID();
+    const otherOrg = randomUUID();
+    const otherKey = `pk_${randomUUID()}`;
+    await redis().set(`key:${otherKey}`, `${otherProject}|${otherOrg}`, "EX", 3600);
+    for (const payload of [
+      input,
+      { ...input, key: otherKey },
+      {
+        ...input,
+        sessionId: "another_session",
+        events: [{ ...input.events[0], eventId: "separate_session", ts: Date.now() }],
+      },
+    ]) {
+      expect((await app.inject({ method: "POST", url: "/v1/events", payload })).statusCode).toBe(
+        202,
+      );
+    }
+    await drain();
+    expect(await count("struggles", input.anonId)).toBe(0);
+    const result = await ch.query({
+      query: "SELECT count() AS n FROM struggles WHERE project_id={p:String}",
+      query_params: { p: otherProject },
+      format: "JSONEachRow",
+    });
+    expect(Number((await result.json<{ n: string }>())[0]?.n)).toBe(0);
+  });
   it("rejects invalid session IDs and timestamps through the actual HTTP route", async () => {
     const input = batch();
     for (const sessionId of ["bad:session", "x".repeat(65), "a\nb"]) {
