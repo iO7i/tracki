@@ -8,6 +8,15 @@ Tracki was developed privately from June–July 2026 and published as a cleaned 
 
 Tracki connects customer behavior to timely assistance. It detects friction such as repeated payment failures, OTP loops, rage clicks, and abandoned onboarding, then delivers contextual help through web interfaces, mobile experiences, or WhatsApp. An Arabic and English dashboard brings customer journeys, interventions, and outcomes together.
 
+```text
+browser / mobile SDKs
+        ↓ shared event protocol
+durable ingestion inbox → friction detectors → contextual interventions
+        ↓                         ↓                    ↓
+   PostgreSQL                 ClickHouse          web / mobile / WhatsApp
+        └────────────── journeys, outcomes, review-gated knowledge ──────┘
+```
+
 ## Capabilities
 
 - **Behavioral analytics:** first-party event collection, live activity, visitor timelines, saved segments, and friction scoring.
@@ -34,6 +43,16 @@ Tracki is a TypeScript monorepo managed with pnpm and Turborepo. Web and mobile 
 | `packages/shared` | Event contracts, privacy masking, normalization, and scoring |
 
 PostgreSQL stores application data, the durable telemetry inbox, and transactional detector state. ClickHouse stores behavioral events and detections; Redis supports caching, rate limits, and best-effort live updates. Docker Compose provides local infrastructure.
+
+## One-command proof
+
+After the local dependencies are running, run:
+
+```sh
+pnpm test
+```
+
+The proof surface includes stable event IDs, ingestion-time masking, durable acceptance, retry behavior, detector state, mobile protocol conformance, and an integration path that injects a delivery failure before a real API retry. The repository does not claim lossless client telemetry or causal attribution; those boundaries are documented below.
 
 ## Run locally
 
