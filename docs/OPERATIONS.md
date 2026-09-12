@@ -43,6 +43,18 @@ Before service-backed checks, `pnpm ops:preflight` probes the required local
 ports and emits actionable errors for missing PostgreSQL, Redis, or ClickHouse
 containers.
 
+The local/static privacy gate is `pnpm ops:privacy-audit`. It checks runtime
+logging arguments, aggregate-only metrics, both tenant predicates in every
+ClickHouse events/struggles read, the two payload-sensitive integration outputs,
+and generated evidence for common raw PII/secret patterns. It writes a
+metadata-only report and manifest under `evidence/privacy-audit/`.
+
+For the exact migrations, two-tenant seed, service startup, keyed ramp,
+reconciliation, and expected outputs, use
+[`docs/SERVICE-VERIFICATION.md`](SERVICE-VERIFICATION.md). It is a
+non-production procedure and does not turn unavailable infrastructure into a
+green claim.
+
 ## Synthetic ramp and reconciliation
 
 Run the deterministic ramp without a key first. This produces a report with an
@@ -146,3 +158,8 @@ starting new workers.
 
 The current local evidence boundary and blockers are recorded in
 [`docs/verification/2026-09-12.md`](verification/2026-09-12.md).
+
+Release promotion, migration, rollback, and risk controls are captured in
+[`docs/RELEASE-CHECKLIST.md`](RELEASE-CHECKLIST.md),
+[`docs/RISK-REGISTER.md`](RISK-REGISTER.md), and the ready-to-paste
+[`docs/PR-DESCRIPTION.md`](PR-DESCRIPTION.md).

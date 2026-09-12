@@ -37,7 +37,7 @@ async function main(): Promise<void> {
   process.on("SIGTERM", shutdown);
 }
 
-main().catch((err) => {
-  console.error("ingest failed to start", err);
+main().catch(() => {
+  console.error("ingest failed to start");
   process.exit(1);
 });

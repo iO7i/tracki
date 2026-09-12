@@ -23,8 +23,10 @@
     "ops:fuzz": "node apps/ingest/node_modules/tsx/dist/cli.mjs bench/operations/adversarial-fuzz.ts",
     "ops:index": "node bench/operations/index-evidence.mjs",
     "ops:preflight": "node bench/operations/preflight-services.mjs",
+    "ops:privacy-audit": "node bench/operations/privacy-audit.mjs",
     "ops:verify": "node bench/operations/verify-ci.mjs",
     "ops:reconcile": "node bench/operations/reconcile.mjs",
+    "ops:seed": "node apps/ingest/bench/seed-operations.mjs",
     "ops:whatsapp": "node apps/ingest/bench/whatsapp-check.mjs"
   },
   "devDependencies": {

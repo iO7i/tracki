@@ -22,7 +22,14 @@ for (const path of [
   ".github/workflows/native.yml",
   "bench/operations/adversarial-fuzz.ts",
   "bench/operations/friction-benchmark.ts",
+  "bench/operations/privacy-audit.mjs",
   "apps/ingest/src/server.contract.test.ts",
+  "apps/ingest/src/privacy.contract.test.ts",
+  "apps/ingest/bench/seed-operations.mjs",
+  "docs/SERVICE-VERIFICATION.md",
+  "docs/RELEASE-CHECKLIST.md",
+  "docs/RISK-REGISTER.md",
+  "docs/PR-DESCRIPTION.md",
   "sdks/flutter/example/main.dart",
   "sdks/android/consumer/build.gradle.kts",
   "sdks/android/consumer/src/main/AndroidManifest.xml",
@@ -35,6 +42,8 @@ requireText(".github/workflows/ci.yml", "tracki-fuzz-*.json*");
 requireText(".github/workflows/ci.yml", "behavioral-evidence");
 requireText(".github/workflows/ci.yml", "if-no-files-found: error");
 requireText(".github/workflows/ci.yml", "pnpm ops:preflight");
+requireText(".github/workflows/ci.yml", "pnpm ops:privacy-audit");
+requireText(".github/workflows/ci.yml", "tracki-privacy-audit");
 requireText(".github/workflows/native.yml", "workflow-contract:");
 requireText(".github/workflows/native.yml", "flutter-consumer-apk");
 requireText(".github/workflows/native.yml", "android-consumer-apk");

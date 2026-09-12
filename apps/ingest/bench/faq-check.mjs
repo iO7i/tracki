@@ -100,7 +100,7 @@ async function main() {
 
   if (!failed) {
     console.log("PASS: Arabic-variant + English search; published-only; unknown key empty;");
-    console.log("  faq events stored:", [...types].join(", "), "| scrubbed query:", searchRow?.q);
+    console.log("  faq event assertions passed; scrubbed query was not printed");
   }
   await sql.end();
   await ch.close();

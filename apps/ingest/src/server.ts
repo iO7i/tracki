@@ -179,9 +179,9 @@ export function buildServer(): FastifyInstance {
               projectForWaId,
             );
             if (projectId) await handleInbound(projectId, from, text, msg.id);
-          } catch (err) {
+          } catch {
             // Audit M3: one bad message must not fail the whole batch.
-            console.error("whatsapp inbound failed", err);
+            console.error("whatsapp inbound failed");
           }
         }
       }

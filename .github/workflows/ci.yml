@@ -64,6 +64,9 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Privacy and tenant audit
+        run: pnpm ops:privacy-audit -- --output="$RUNNER_TEMP/tracki-privacy-audit"
+
       - name: Service preflight
         run: pnpm ops:preflight
 
@@ -92,6 +95,7 @@ jobs:
           path: |
             ${{ runner.temp }}/tracki-fuzz-*.json*
             ${{ runner.temp }}/tracki-friction/**
+            ${{ runner.temp }}/tracki-privacy-audit/**
 
       - name: Build
         run: pnpm build

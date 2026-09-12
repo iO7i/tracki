@@ -81,6 +81,22 @@
       "nextAction": "Preserve these tests when changing the ingestion route or metric names."
     },
     {
+      "id": "privacy-tenant-boundary",
+      "claim": "Normalized events and aggregate metrics do not expose raw PII, and analytics reads remain scoped to both organization and project.",
+      "status": "verified_locally",
+      "proof": [
+        { "path": "apps/ingest/src/privacy.contract.test.ts", "kind": "tracked" },
+        { "path": "bench/operations/privacy-audit.mjs", "kind": "tracked" },
+        { "path": "evidence/privacy-audit/", "kind": "generated" }
+      ],
+      "acceptanceThresholds": {
+        "rawPiiInNormalizedEvent": { "operator": "=", "value": 0, "unit": "matches" },
+        "unsafeRuntimeLogCalls": { "operator": "=", "value": 0, "unit": "calls" },
+        "tenantQueryViolations": { "operator": "=", "value": 0, "unit": "queries" }
+      },
+      "nextAction": "Run the service-backed integration suite and archive the privacy-audit manifest for the target environment."
+    },
+    {
       "id": "friction-quality",
       "claim": "Detector quality is reported against versioned positive and hard-negative scenarios.",
       "status": "verified_synthetic",

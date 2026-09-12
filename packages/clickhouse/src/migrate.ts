@@ -124,8 +124,8 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
       );
       process.exit(0);
     })
-    .catch((err) => {
-      console.error("ClickHouse migration failed:", err);
+    .catch(() => {
+      console.error("ClickHouse migration failed");
       process.exit(1);
     });
 }

@@ -86,8 +86,7 @@ async function main() {
 
   if (!process.exitCode) {
     console.log("PASS: valid event stored & PII masked; unknown-key event dropped");
-    console.log("  url:  ", r.url);
-    console.log("  props:", r.props);
+    console.log("  stored payload assertions passed; raw URL/props were not printed");
   }
 
   await sql.end();
