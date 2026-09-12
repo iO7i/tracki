@@ -7,6 +7,14 @@ on:
   workflow_dispatch:
 
 jobs:
+  workflow-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate native workflow and evidence contracts
+        run: node bench/operations/verify-ci.mjs
+
   react-native-reference:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -19,7 +27,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile || { echo "::error::pnpm install failed; verify Node 22, pnpm 9.12.3, and the lockfile on this runner."; exit 1; }
       - run: pnpm --filter @tracki/mobile-core test
       - run: pnpm --filter @tracki/react-native test
       - run: pnpm --filter @tracki/react-native check-types
@@ -37,6 +46,7 @@ jobs:
       - name: Verify pure Dart package
         working-directory: sdks/flutter
         run: |
+          command -v flutter || { echo "::error::Flutter toolchain is unavailable after setup; inspect flutter-action and runner image."; exit 1; }
           dart format --output=none --set-exit-if-changed lib test
           flutter pub get
           flutter analyze
@@ -51,6 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: flutter-consumer-apk
+          if-no-files-found: error
           path: ${{ runner.temp }}/tracki-consumer/build/app/outputs/flutter-apk/app-debug.apk
 
   swift:
@@ -60,6 +71,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Swift package tests and build
         run: |
+          command -v swift || { echo "::error::Swift toolchain is unavailable; this job must run on macos-14."; exit 1; }
+          command -v xcodebuild || { echo "::error::Xcode is unavailable; inspect the macos-14 runner image."; exit 1; }
           swift test --package-path sdks/ios
           swift build --package-path sdks/ios
       - name: iOS Simulator consumer compile
@@ -82,10 +95,11 @@ jobs:
         with:
           gradle-version: "8.7"
       - name: JVM conformance
-        run: gradle -p sdks/android test
+        run: gradle -p sdks/android test || { echo "::error::Android JVM conformance failed; inspect Java 17, Gradle 8.7, and Kotlin dependencies."; exit 1; }
       - name: Android library lint and consumer APK
-        run: gradle -p sdks/android :sdk:lint :consumer:assembleDebug
+        run: gradle -p sdks/android :sdk:lint :consumer:assembleDebug || { echo "::error::Android consumer verification failed; inspect SDK platform 35, build-tools 35.0.0, and the APK path."; exit 1; }
       - uses: actions/upload-artifact@v4
         with:
           name: android-consumer-apk
+          if-no-files-found: error
           path: sdks/android/consumer/build/outputs/apk/debug/consumer-debug.apk

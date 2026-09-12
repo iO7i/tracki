@@ -56,8 +56,14 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Validate CI and evidence contracts
+        run: pnpm ops:verify
+
       - name: Install
         run: pnpm install --frozen-lockfile
+
+      - name: Service preflight
+        run: pnpm ops:preflight
 
       - name: Lint
         run: pnpm lint
@@ -70,7 +76,9 @@ jobs:
 
       - name: Bounded behavioral evidence
         run: |
-          pnpm ops:fuzz -- --iterations=250 --output="$RUNNER_TEMP/tracki-fuzz.json"
+          for seed in tracki-fuzz-v1 tracki-fuzz-reorder-v1 tracki-fuzz-boundary-v1; do
+            pnpm ops:fuzz -- --iterations=10000 --seed="$seed" --output="$RUNNER_TEMP/tracki-fuzz-$seed.json"
+          done
           pnpm ops:friction -- --set=holdout --output="$RUNNER_TEMP/tracki-friction"
 
       - name: Archive behavioral evidence
@@ -78,8 +86,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: behavioral-evidence
+          if-no-files-found: error
           path: |
-            ${{ runner.temp }}/tracki-fuzz.json*
+            ${{ runner.temp }}/tracki-fuzz-*.json*
             ${{ runner.temp }}/tracki-friction/**
 
       - name: Build

@@ -2,7 +2,9 @@
 
 This matrix keeps public wording tied to a reproducible proof surface. A code
 path or workflow definition is not itself a green runtime result; statuses must
-be updated from the corresponding evidence artifact or CI run.
+be updated from the corresponding evidence artifact or CI run. The canonical
+machine-readable version, including acceptance thresholds and next actions, is
+[`docs/acceptance-matrix.json`](acceptance-matrix.json).
 
 | Claim | Proof surface | Status boundary |
 | --- | --- | --- |

@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "lastReviewed": "2026-09-12",
+  "statusVocabulary": [
+    "verified_locally",
+    "verified_synthetic",
+    "ci_required",
+    "service_required",
+    "not_run",
+    "procedure_only"
+  ],
+  "entries": [
+    {
+      "id": "sdk-event-identities",
+      "claim": "Current SDKs assign stable event IDs before first send and preserve them on retry.",
+      "status": "verified_locally",
+      "proof": [
+        { "path": "packages/mobile-core/src/conformance.test.ts", "kind": "tracked" },
+        { "path": "sdks/conformance/journey-batch.json", "kind": "tracked" },
+        { "path": ".github/workflows/native.yml", "kind": "tracked" }
+      ],
+      "acceptanceThresholds": {
+        "eventIdUniqueness": { "operator": "=", "value": 1, "unit": "per-event identity" },
+        "retryIdentityChange": { "operator": "=", "value": 0, "unit": "changed IDs" }
+      },
+      "nextAction": "Run the native workflow and archive its consumer artifacts."
+    },
+    {
+      "id": "protocol-compatibility",
+      "claim": "The ingestion envelope accepts protocol v1 and legacy no-version envelopes while rejecting unsupported future versions.",
+      "status": "verified_locally",
+      "proof": [
+        { "path": "packages/shared/src/protocol.test.ts", "kind": "tracked" },
+        { "path": "sdks/conformance/protocol-compatibility.json", "kind": "tracked" }
+      ],
+      "acceptanceThresholds": {
+        "unsupportedVersionStatus": { "operator": "=", "value": 400, "unit": "HTTP status" }
+      },
+      "nextAction": "Keep the compatibility fixture in every SDK release check."
+    },
+    {
+      "id": "durable-ingestion-identity",
+      "claim": "The durable inbox treats project plus event ID as the identity and rejects explicit-ID payload conflicts.",
+      "status": "service_required",
+      "proof": [
+        { "path": "apps/ingest/src/reliability.test.ts", "kind": "tracked" },
+        { "path": "apps/ingest/src/inbox.ts", "kind": "tracked" },
+        { "path": "apps/ingest/integration/delivery.test.ts", "kind": "tracked" }
+      ],
+      "acceptanceThresholds": {
+        "changedExplicitIdStatus": { "operator": "=", "value": 409, "unit": "HTTP status" },
+        "exactReplayAdditionalRows": { "operator": "=", "value": 0, "unit": "rows" }
+      },
+      "nextAction": "Run the integration suite against PostgreSQL and archive the result."
+    },
+    {
+      "id": "detector-invariants",
+      "claim": "Reordering and exact replay do not change detector decisions.",
+      "status": "verified_synthetic",
+      "proof": [
+        { "path": "bench/operations/adversarial-fuzz.ts", "kind": "tracked" },
+        { "path": "evidence/friction-benchmark/fuzz/", "kind": "generated" }
+      ],
+      "acceptanceThresholds": {
+        "invariantFailures": { "operator": "=", "value": 0, "unit": "failures" }
+      },
+      "nextAction": "Keep three 10,000-iteration fuzz seeds in CI and investigate any minimized failure."
+    },
+    {
+      "id": "http-contract-and-metrics",
+      "claim": "Malformed, unsupported, rate-limited, conflicting, unavailable, and accepted event requests map to explicit statuses and aggregate metrics.",
+      "status": "verified_locally",
+      "proof": [
+        { "path": "apps/ingest/src/server.contract.test.ts", "kind": "tracked" },
+        { "path": "apps/ingest/src/metrics.ts", "kind": "tracked" }
+      ],
+      "acceptanceThresholds": {
+        "payloadLeakageInMetrics": { "operator": "=", "value": 0, "unit": "matches" },
+        "contractCasesWithoutStatus": { "operator": "=", "value": 0, "unit": "cases" }
+      },
+      "nextAction": "Preserve these tests when changing the ingestion route or metric names."
+    },
+    {
+      "id": "friction-quality",
+      "claim": "Detector quality is reported against versioned positive and hard-negative scenarios.",
+      "status": "verified_synthetic",
+      "proof": [
+        { "path": "bench/operations/friction-benchmark.ts", "kind": "tracked" },
+        { "path": "evidence/friction-benchmark/holdout/manifest.json", "kind": "generated" }
+      ],
+      "acceptanceThresholds": {
+        "precision": { "operator": "not_set", "value": null, "unit": "ratio" },
+        "recall": { "operator": "not_set", "value": null, "unit": "ratio" },
+        "falsePositiveRate": { "operator": "not_set", "value": null, "unit": "ratio" }
+      },
+      "nextAction": "Set product-approved quality thresholds before using this as a release gate."
+    },
+    {
+      "id": "language-parity",
+      "claim": "Language-independent detector decisions are compared on paired Arabic and English scenarios.",
+      "status": "verified_synthetic",
+      "proof": [
+        { "path": "bench/operations/friction-benchmark.ts", "kind": "tracked" },
+        { "path": "evidence/friction-benchmark/holdout/report.md", "kind": "generated" }
+      ],
+      "acceptanceThresholds": {
+        "pairedDecisionMismatches": { "operator": "=", "value": 0, "unit": "mismatches" },
+        "rtlRendering": { "operator": "not_run", "value": null, "unit": "browser evidence" }
+      },
+      "nextAction": "Add browser evidence for RTL layout and localized FAQ/search behavior."
+    },
+    {
+      "id": "operational-scale",
+      "claim": "Operational scale is measured with keyed multi-project runs, aggregate metrics, recovery observation, and reconciliation.",
+      "status": "not_run",
+      "proof": [
+        { "path": "bench/operations/run.mjs", "kind": "tracked" },
+        { "path": "bench/operations/reconcile.mjs", "kind": "tracked" },
+        { "path": "evidence/operations/", "kind": "generated" }
+      ],
+      "acceptanceThresholds": {
+        "acceptedEventP95": { "operator": "<=", "value": 500, "unit": "ms" },
+        "oldestPendingAge": { "operator": "<", "value": 300, "unit": "seconds" },
+        "sustainedDeadLetters": { "operator": "=", "value": 0, "unit": "rows" }
+      },
+      "nextAction": "Run with dedicated non-production keys against the full stack, then reconcile."
+    },
+    {
+      "id": "whatsapp-replay",
+      "claim": "Repeated provider webhook IDs do not create a second inbound row or local outbound reply attempt.",
+      "status": "service_required",
+      "proof": [
+        { "path": "apps/ingest/bench/whatsapp-check.mjs", "kind": "tracked" },
+        { "path": "apps/dashboard/drizzle/0013_idempotent_whatsapp.sql", "kind": "tracked" }
+      ],
+      "acceptanceThresholds": {
+        "replayedInboundRows": { "operator": "=", "value": 0, "unit": "additional rows" },
+        "replayedReplyAttempts": { "operator": "=", "value": 0, "unit": "additional attempts" }
+      },
+      "nextAction": "Run the simulator check with the local service stack; real provider delivery remains at-least-once."
+    },
+    {
+      "id": "native-consumer-builds",
+      "claim": "Flutter, Swift, and Android consumer projects compile against the SDKs on supported runners.",
+      "status": "ci_required",
+      "proof": [
+        { "path": ".github/workflows/native.yml", "kind": "tracked" },
+        { "path": "sdks/flutter/example/main.dart", "kind": "tracked" },
+        { "path": "sdks/android/consumer/", "kind": "tracked" }
+      ],
+      "acceptanceThresholds": {
+        "nativeJobFailures": { "operator": "=", "value": 0, "unit": "jobs" },
+        "consumerArtifactMissing": { "operator": "=", "value": 0, "unit": "artifacts" }
+      },
+      "nextAction": "Run and archive the supported-runner workflow."
+    },
+    {
+      "id": "deployment",
+      "claim": "Tracki has documented deployment, canary, rollback, and evidence procedures.",
+      "status": "procedure_only",
+      "proof": [
+        { "path": "docs/DEPLOY.md", "kind": "tracked" },
+        { "path": "docs/OPERATIONS.md", "kind": "tracked" }
+      ],
+      "acceptanceThresholds": {
+        "liveDeployment": { "operator": "not_run", "value": null, "unit": "deployment evidence" }
+      },
+      "nextAction": "Perform an authorized non-production canary and archive logs, metrics, and rollback evidence."
+    }
+  ]
+}

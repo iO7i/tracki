@@ -7,7 +7,7 @@ import { normalizeBatch } from "../../apps/ingest/src/normalize.js";
 import { InMemoryStateStore } from "../../apps/ingest/src/state.js";
 
 const args = parseArgs(process.argv.slice(2));
-const iterations = positiveInt(args.iterations, 250);
+const iterations = positiveInt(args.iterations, 10_000);
 const seed = String(args.seed ?? "tracki-fuzz-v1");
 const now = 1_800_000_000_000;
 const output = String(

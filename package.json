@@ -21,6 +21,9 @@
     "ops:benchmark": "node bench/operations/run.mjs",
     "ops:friction": "node apps/ingest/node_modules/tsx/dist/cli.mjs bench/operations/friction-benchmark.ts",
     "ops:fuzz": "node apps/ingest/node_modules/tsx/dist/cli.mjs bench/operations/adversarial-fuzz.ts",
+    "ops:index": "node bench/operations/index-evidence.mjs",
+    "ops:preflight": "node bench/operations/preflight-services.mjs",
+    "ops:verify": "node bench/operations/verify-ci.mjs",
     "ops:reconcile": "node bench/operations/reconcile.mjs",
     "ops:whatsapp": "node apps/ingest/bench/whatsapp-check.mjs"
   },

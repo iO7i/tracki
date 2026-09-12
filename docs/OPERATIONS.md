@@ -39,6 +39,10 @@ test data. The native workflow is `.github/workflows/native.yml`; it runs the
 React Native reference, Flutter pure-Dart and Android consumer builds, and the
 Swift package/iOS consumer build on their supported runners.
 
+Before service-backed checks, `pnpm ops:preflight` probes the required local
+ports and emits actionable errors for missing PostgreSQL, Redis, or ClickHouse
+containers.
+
 ## Synthetic ramp and reconciliation
 
 Run the deterministic ramp without a key first. This produces a report with an
@@ -75,6 +79,10 @@ physical duplicates. It intentionally labels detector-state and provider-side
 delivery facts as `unknown` when they are not observable from the supplied
 stores.
 
+After generating multiple runs, `pnpm ops:index` creates the metadata-only
+`evidence/index.json`; it indexes manifests and sidecars without copying raw
+payloads.
+
 ## Friction quality and adversarial evidence
 
 The friction benchmark has versioned dev/tune/holdout seeds, positive and hard
@@ -84,14 +92,22 @@ trigger rate, event-time detection latency, macro averages, and parity:
 
 ```sh
 pnpm ops:friction -- --set=holdout
-pnpm ops:fuzz
+pnpm ops:fuzz -- --iterations=10000
+pnpm ops:index
 ```
 
 The rapid-success-navigation case remains a visible hard negative; it is not
-silently relabeled to improve the score. Fuzz regressions are minimized and
-written as recoverable JSON evidence rather than discarded. The benchmark's
-intervention rate is a detector-trigger proxy: it does not execute a popup,
-assist, or external message, so live side-effect rate needs a separate canary.
+silently relabeled to improve the score. CI runs three deterministic 10,000-
+iteration fuzz seeds. Fuzz regressions are minimized and written as recoverable
+JSON evidence rather than discarded. The benchmark's intervention rate is a
+detector-trigger proxy: it does not execute a popup, assist, or external
+message, so live side-effect rate needs a separate canary.
+
+The machine-readable acceptance contract is
+`docs/acceptance-matrix.json`. `pnpm ops:verify` validates its tracked proof
+paths, threshold objects, native consumer inputs, and CI artifact references;
+it does not turn a `not_run`, `ci_required`, or `service_required` entry into a
+green result.
 
 ## Fault matrix
 
