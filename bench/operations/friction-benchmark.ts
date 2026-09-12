@@ -113,6 +113,7 @@ const manifest = {
   set: runSet,
   seed: raw.seed,
   gitSha: gitSha(),
+  generatedAt: raw.generatedAt,
   artifacts: {},
 };
 for (const name of ["raw.json", "summary.json", "report.md"]) {
