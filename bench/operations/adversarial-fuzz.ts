@@ -70,6 +70,7 @@ await writeFile(
     {
       schemaVersion: 1,
       artifact: output,
+      gitSha: raw.gitSha,
       sha256: createHash("sha256").update(contents).digest("hex"),
       bytes: contents.byteLength,
       generatedAt: raw.generatedAt,
