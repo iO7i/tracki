@@ -115,6 +115,7 @@ Telemetry delivery uses stable client event IDs and a durable acceptance ledger.
 - [Reliability and operations](docs/RELIABILITY.md)
 - [Operations and evidence](docs/OPERATIONS.md)
 - [Claim → evidence matrix](docs/CLAIMS.md)
+- [Machine-readable acceptance matrix](docs/acceptance-matrix.json)
 - [Mobile wire protocol](docs/mobile-wire-protocol.md)
 - [Mobile SDK overview](sdks/README.md)
 - [React Native SDK](packages/sdk-react-native/README.md)
