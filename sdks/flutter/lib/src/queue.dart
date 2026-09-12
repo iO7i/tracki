@@ -19,6 +19,7 @@ class EventQueue {
   final DeviceInfo _device;
   final Transport _transport;
   final Clock _now;
+  final IdFactory _newId;
 
   final List<EventInput> _buffer = [];
   Timer? _timer;
@@ -31,7 +32,7 @@ class EventQueue {
     this._identity,
     this._device,
     this._transport,
-    this._now,
+    this._now, [this._newId = defaultIdFactory]
   );
 
   void setResponseHandler(void Function(Object? data) fn) {
@@ -40,7 +41,15 @@ class EventQueue {
 
   void enqueue(EventInput event) {
     _identity.touchSession();
-    _buffer.add(event);
+    _buffer.add(EventInput(
+      eventId: event.eventId ?? _newId('evt'),
+      type: event.type,
+      ts: event.ts,
+      path: event.path,
+      url: event.url,
+      referrer: event.referrer,
+      props: event.props,
+    ));
     if (_buffer.length >= flushSize) {
       flush();
     } else if (_timer == null) {
@@ -64,6 +73,7 @@ class EventQueue {
       for (var i = 0; i < events.length; i += _maxBatch) {
         final end = (i + _maxBatch < events.length) ? i + _maxBatch : events.length;
         final batch = Batch(
+          protocolVersion: 1,
           key: _key,
           anonId: _identity.getAnonId(),
           userId: _identity.getUserId(),

@@ -1,0 +1,91 @@
+name: Native SDK verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  react-native-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @tracki/mobile-core test
+      - run: pnpm --filter @tracki/react-native test
+      - run: pnpm --filter @tracki/react-native check-types
+
+  flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.24.5"
+          channel: stable
+          cache: true
+      - name: Verify pure Dart package
+        working-directory: sdks/flutter
+        run: |
+          dart format --output=none --set-exit-if-changed lib test
+          flutter pub get
+          flutter analyze
+          flutter test
+      - name: Build a real Flutter consumer APK
+        run: |
+          flutter create --overwrite --platforms=android --project-name tracki_consumer --org app.tracki "$RUNNER_TEMP/tracki-consumer"
+          cd "$RUNNER_TEMP/tracki-consumer"
+          flutter pub add tracki_flutter --path "$GITHUB_WORKSPACE/sdks/flutter"
+          cp "$GITHUB_WORKSPACE/sdks/flutter/example/main.dart" lib/main.dart
+          flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flutter-consumer-apk
+          path: ${{ runner.temp }}/tracki-consumer/build/app/outputs/flutter-apk/app-debug.apk
+
+  swift:
+    runs-on: macos-14
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift package tests and build
+        run: |
+          swift test --package-path sdks/ios
+          swift build --package-path sdks/ios
+      - name: iOS Simulator consumer compile
+        run: |
+          xcodebuild -scheme TrackiSDK -destination 'generic/platform=iOS Simulator' -packagePath "$GITHUB_WORKSPACE/sdks/ios" build CODE_SIGNING_ALLOWED=NO
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+      - name: JVM conformance
+        run: gradle -p sdks/android test
+      - name: Android library lint and consumer APK
+        run: gradle -p sdks/android :sdk:lint :consumer:assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-consumer-apk
+          path: sdks/android/consumer/build/outputs/apk/debug/consumer-debug.apk

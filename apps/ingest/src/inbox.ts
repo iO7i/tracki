@@ -1,15 +1,18 @@
 import type { StoredEvent } from "@tracki/shared";
 import type postgres from "postgres";
+import { EventIdentityConflict, eventPayloadHash } from "./normalize.js";
 import { pg } from "./pg";
 
 /** Durable ledger: completed identities are retained; project erasure requires operator cleanup. */
 export async function ensureInbox(sql: postgres.Sql = pg()): Promise<void> {
   await sql`CREATE TABLE IF NOT EXISTS telemetry_inbox (
     project_id text NOT NULL, event_id text NOT NULL, org_id text NOT NULL,
-    event_time bigint NOT NULL, payload jsonb, completed_at timestamptz,
+    event_time bigint NOT NULL, payload jsonb, payload_hash text,
+    completed_at timestamptz,
     attempts integer NOT NULL DEFAULT 0, available_at timestamptz NOT NULL DEFAULT now(),
     dead_at timestamptz, created_at timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (project_id, event_id))`;
+  await sql`ALTER TABLE telemetry_inbox ADD COLUMN IF NOT EXISTS payload_hash text`;
   await sql`CREATE INDEX IF NOT EXISTS telemetry_pending ON telemetry_inbox (available_at, event_time)
     WHERE completed_at IS NULL AND dead_at IS NULL`;
   await sql`CREATE INDEX IF NOT EXISTS telemetry_project_order ON telemetry_inbox (project_id,event_time,event_id)
@@ -27,11 +30,25 @@ export async function acceptEvents(
     const accepted: StoredEvent[] = [];
     // Stable lock order prevents overlapping batches from deadlocking each other.
     for (const e of [...events].sort((a, b) => a.event_id.localeCompare(b.event_id))) {
-      const rows =
-        await tx`INSERT INTO telemetry_inbox (project_id,event_id,org_id,event_time,payload)
-        VALUES (${e.project_id},${e.event_id},${e.org_id},${e.ts},${tx.json(e as unknown as postgres.JSONValue)})
+      const payloadHash = eventPayloadHash(e);
+      const rows = await tx`INSERT INTO telemetry_inbox
+          (project_id,event_id,org_id,event_time,payload,payload_hash)
+        VALUES
+          (${e.project_id},${e.event_id},${e.org_id},${e.ts},
+           ${tx.json(e as unknown as postgres.JSONValue)},${payloadHash})
         ON CONFLICT (project_id,event_id) DO NOTHING RETURNING event_id`;
-      if (rows.length) accepted.push(e);
+      if (rows.length) {
+        accepted.push(e);
+        continue;
+      }
+      const existing = await tx<{ payload_hash: string | null }[]>`
+        SELECT payload_hash FROM telemetry_inbox
+        WHERE project_id=${e.project_id} AND event_id=${e.event_id}
+        FOR KEY SHARE`;
+      const existingHash = existing[0]?.payload_hash;
+      // Rows created before payload_hash was introduced are legacy duplicates:
+      // retain their old no-op behavior until an explicit migration backfills them.
+      if (existingHash && existingHash !== payloadHash) throw new EventIdentityConflict();
     }
     return accepted;
   }) as Promise<StoredEvent[]>;

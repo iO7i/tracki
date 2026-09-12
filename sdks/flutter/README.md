@@ -4,11 +4,11 @@ Dart port of `@tracki/mobile-core` — the headless protocol engine for Tracki's
 behavioral-intelligence platform. Pure-Dart core (no Flutter dependency), so the
 conformance suite runs under plain `dart test`.
 
-> **Status: source-complete, NOT compile-verified** — this SDK implements
-> `docs/mobile-wire-protocol.md` and ships conformance tests against
-> `sdks/conformance/`, but no Flutter/Xcode/Gradle toolchain runs in CI yet.
-> Treat the TypeScript `@tracki/mobile-core` as the reference until native CI
-> lands.
+> **Status: source-complete; native consumer build runs in heavy CI** — this SDK
+> implements `docs/mobile-wire-protocol.md`, ships conformance tests against
+> `sdks/conformance/`, and includes a minimal Flutter consumer in `example/`.
+> The native job is the compile evidence; this Windows checkout has not run
+> Flutter locally.
 
 ## Quickstart
 

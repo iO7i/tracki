@@ -1,4 +1,4 @@
-# Tracki Mobile Wire Protocol (v1, implementation
+# Tracki Mobile Wire Protocol (v1)
 
 The **normative** contract every Tracki mobile SDK implements. The TypeScript
 reference implementation is `@tracki/mobile-core` (verified by unit tests, the
@@ -21,6 +21,13 @@ ingestion. SDKs MUST be fail-silent: telemetry must never break the host app.
 - `userId` — set by `identify(userId)`; persisted; sent on every batch after.
   Identification also emits an `identify` event (the server links identities).
 
+Each event receives an `eventId` before its first send. A retry MUST reuse the
+same ID, and an ID MUST never be reused for a different payload. The server
+deduplicates by `(project, eventId)` inside the durable PostgreSQL acceptance
+transaction. Exact duplicate IDs in one batch are harmless; reusing an ID with
+a different payload is rejected with HTTP `409`. Envelopes without event IDs
+remain supported as a legacy compatibility path with weaker retry guarantees.
+
 Storage keys (shared across SDKs so an app migrating SDKs keeps identity):
 `tracki_anon`, `tracki_user`, `tracki_session`, `tracki_session_ts`,
 `tracki_caps` (frequency-cap JSON map).
@@ -28,11 +35,12 @@ Storage keys (shared across SDKs so an app migrating SDKs keeps identity):
 ## 2. Event batching — `POST {endpoint}/v1/events`
 
 Queue events; flush when **10 buffered** or **5 s** elapsed or the app
-backgrounds/terminates. Max **50 events per batch** (split larger). The server
-always answers `202` with a JSON body; it never reveals key validity.
+backgrounds/terminates. Max **50 events per batch** (split larger). Successful
+acceptance does not reveal key validity.
 
 ```json
 {
+  "protocolVersion": 1,        // omit only for legacy compatibility
   "key": "pk_…",
   "anonId": "anon_…",
   "userId": "user_…",            // omit when anonymous
@@ -45,10 +53,15 @@ always answers `202` with a JSON body; it never reveals key validity.
     "model": "iPhone15,2",       // ≤64 chars
     "sdk": "react-native"        // "react-native" | "flutter" | "ios" | "android"
   },
-  "events": [ { "type": "…", "ts": 1700000000000, "path": "/Checkout",
+  "events": [ { "eventId": "evt_…", "type": "…", "ts": 1700000000000, "path": "/Checkout",
                 "referrer": "/Home", "props": { } } ]
 }
 ```
+
+Valid accepted and duplicate batches return HTTP `202` without revealing key
+validity. Malformed or future-version envelopes return `400`, rate limits return
+`429`, explicit-ID conflicts return `409`, and a temporary acceptance-store
+failure returns retryable `503`.
 
 - `path` = the **current screen** as `/<ScreenName>` (whitespace → `-`). Screen
   names like "Checkout"/"Payment" naturally rank as high-intent paths server-side.
@@ -153,5 +166,6 @@ request bodies. Compare as parsed JSON (not strings — key order is free).
 ships a test doing the same.
 
 Status note: the TS reference + RN adapter are compile- and test-verified in
-CI; the Flutter/Swift/Kotlin SDKs are **source-complete, not compile-verified**
-(no native toolchain in CI yet — tracked follow-up).
+CI. Flutter, Swift, and Kotlin/Android have native consumer-build jobs in
+`.github/workflows/native.yml`; the Windows development checkout does not have
+those toolchains, so a green native CI run is the compile evidence.

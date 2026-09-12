@@ -67,6 +67,8 @@ public struct DeviceInfo: Equatable, Sendable {
 /// A single queued event. `path`/`referrer`/`url`/`props` are omitted from the
 /// serialized JSON when nil (the wire protocol forbids explicit nulls).
 public struct EventInput {
+    /// Stable client identity. Reused for every retry of this event.
+    public var eventId: String?
     public var type: String
     public var ts: Int
     public var path: String?
@@ -75,6 +77,7 @@ public struct EventInput {
     public var props: [String: Any]?
 
     public init(
+        eventId: String? = nil,
         type: String,
         ts: Int,
         path: String? = nil,
@@ -82,6 +85,7 @@ public struct EventInput {
         referrer: String? = nil,
         props: [String: Any]? = nil
     ) {
+        self.eventId = eventId
         self.type = type
         self.ts = ts
         self.path = path
@@ -92,6 +96,7 @@ public struct EventInput {
 
     public func toJSON() -> [String: Any] {
         var m: [String: Any] = ["type": type, "ts": ts]
+        if let eventId { m["eventId"] = eventId }
         if let path { m["path"] = path }
         if let url { m["url"] = url }
         if let referrer { m["referrer"] = referrer }
@@ -102,6 +107,7 @@ public struct EventInput {
 
 /// The `/v1/events` batch envelope. `userId` is omitted when anonymous.
 public struct Batch {
+    public var protocolVersion: Int
     public var key: String
     public var anonId: String
     public var userId: String?
@@ -110,8 +116,28 @@ public struct Batch {
     public var device: DeviceInfo
     public var events: [EventInput]
 
+    public init(
+        protocolVersion: Int = 1,
+        key: String,
+        anonId: String,
+        userId: String? = nil,
+        sessionId: String,
+        sentAt: Int,
+        device: DeviceInfo,
+        events: [EventInput]
+    ) {
+        self.protocolVersion = protocolVersion
+        self.key = key
+        self.anonId = anonId
+        self.userId = userId
+        self.sessionId = sessionId
+        self.sentAt = sentAt
+        self.device = device
+        self.events = events
+    }
+
     public func toJSON() -> [String: Any] {
-        var m: [String: Any] = ["key": key, "anonId": anonId]
+        var m: [String: Any] = ["protocolVersion": protocolVersion, "key": key, "anonId": anonId]
         if let userId { m["userId"] = userId }
         m["sessionId"] = sessionId
         m["sentAt"] = sentAt

@@ -24,6 +24,7 @@ class EventQueue(
     private val transport: Transport,
     private val now: Clock,
     private val scope: CoroutineScope,
+    private val newId: IdFactory = ::defaultIdFactory,
 ) {
     private val buffer = ArrayList<EventInput>()
     private var timer: Job? = null
@@ -37,9 +38,10 @@ class EventQueue(
 
     fun enqueue(event: EventInput) {
         identity.touchSession()
+        val identified = event.copy(eventId = event.eventId ?: newId("evt"))
         val count: Int
         synchronized(buffer) {
-            buffer.add(event)
+            buffer.add(identified)
             count = buffer.size
         }
         if (count >= FLUSH_SIZE) {
@@ -69,6 +71,7 @@ class EventQueue(
             while (i < events.size) {
                 val end = minOf(i + MAX_BATCH, events.size)
                 val batch = Batch(
+                    protocolVersion = 1,
                     key = key,
                     anonId = identity.getAnonId(),
                     userId = identity.getUserId(),

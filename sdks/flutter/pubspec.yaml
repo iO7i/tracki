@@ -2,7 +2,8 @@ name: tracki_flutter
 description: >-
   Tracki behavioral-intelligence mobile SDK (Dart port of @tracki/mobile-core).
   Pure-Dart core implementing docs/mobile-wire-protocol.md; conformance-tested
-  against sdks/conformance/. Source-complete, not yet compile-verified in CI.
+  against sdks/conformance/. The pure-Dart core is checked in CI; the native
+  Flutter consumer build is a separate heavy CI job.
 version: 0.1.0
 publish_to: none
 

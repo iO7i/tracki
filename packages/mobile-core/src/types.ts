@@ -34,6 +34,7 @@ export interface EventInput {
 
 export interface Batch {
   key: string;
+  protocolVersion: 1;
   anonId: string;
   userId?: string;
   sessionId: string;

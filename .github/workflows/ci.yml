@@ -68,6 +68,20 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Bounded behavioral evidence
+        run: |
+          pnpm ops:fuzz -- --iterations=250 --output="$RUNNER_TEMP/tracki-fuzz.json"
+          pnpm ops:friction -- --set=holdout --output="$RUNNER_TEMP/tracki-friction"
+
+      - name: Archive behavioral evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: behavioral-evidence
+          path: |
+            ${{ runner.temp }}/tracki-fuzz.json*
+            ${{ runner.temp }}/tracki-friction/**
+
       - name: Build
         run: pnpm build
 

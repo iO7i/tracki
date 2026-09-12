@@ -61,6 +61,27 @@ docker compose -f infra/docker-compose.prod.yml run --rm migrate # re-run migrat
 ```
 Data persists in named volumes (`pgdata`, `chdata`, `redisdata`). **Back these up.**
 
+## 5. Canary and rollback evidence
+
+Treat each release as a canary until the durable path is proven on the target
+host. Use a non-production project/key and synthetic payloads only:
+
+```sh
+curl -fsS https://in.example.com/health
+curl -fsS https://in.example.com/metrics > canary-metrics.txt
+pnpm ops:benchmark -- --key="$CANARY_KEY" --levels=1 --duration-ms=30000
+pnpm ops:reconcile -- --raw=<canary-raw.json> --project-id=<canary-project>
+```
+
+Record the image digest, migration result, health response, benchmark report,
+reconciliation output, pending age, dead-letter count, and ClickHouse error
+counter before promoting. If the canary fails, stop new producers, keep the
+Postgres/ClickHouse/Redis volumes intact, pin the previously known-good image,
+and restart the services; do not delete or rewrite telemetry while diagnosing.
+Re-run reconciliation after recovery before resuming customer traffic. This
+procedure is an operational control, not evidence that a production canary has
+been run in this repository.
+
 ## Hardening checklist (already in code, confirm in your env)
 - `NODE_ENV=production` is set → CSP + security headers on, simulate endpoints off.
 - `ANTHROPIC_API_KEY` set → AI runs Claude (never fabricates; grounded only).

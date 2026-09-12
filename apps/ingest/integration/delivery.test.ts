@@ -126,6 +126,19 @@ describe("real ingestion and worker contract", () => {
     expect(await count("events", input.anonId)).toBe(3);
     expect(await count("struggles", input.anonId)).toBe(1);
   });
+  it("rejects explicit-ID reuse with a changed payload across requests", async () => {
+    const input = batch([8000]);
+    expect(
+      (await app.inject({ method: "POST", url: "/v1/events", payload: input })).statusCode,
+    ).toBe(202);
+    const changed = {
+      ...input,
+      events: input.events.map((event) => ({ ...event, props: { tag: "button", id: "refund" } })),
+    };
+    expect(
+      (await app.inject({ method: "POST", url: "/v1/events", payload: changed })).statusCode,
+    ).toBe(409);
+  });
   it("multiple workers cannot acknowledge another worker's in-flight record", async () => {
     const input = batch([8000]);
     await acceptEvents(normalizeBatch(input, ref, "", Date.now()), sql);

@@ -7,6 +7,7 @@ import {
   chatRequestSchema,
   eventBatchSchema,
   handoffRequestSchema,
+  protocolCompatibility,
   surfaceMatches,
 } from "@tracki/shared";
 import { simulateAllowed, verifySignature } from "@tracki/whatsapp";
@@ -17,7 +18,8 @@ import { handleChat } from "./chat.js";
 import { REDIS_KEYS } from "./config.js";
 import { acceptEvents } from "./inbox";
 import { allowRequest, resolveKey } from "./keys.js";
-import { normalizeBatch } from "./normalize.js";
+import { inc, observe, prometheus, setGauge } from "./metrics.js";
+import { EventIdentityConflict, normalizeBatch } from "./normalize.js";
 import {
   faqArticlesForProject,
   peekHandoffProject,
@@ -89,7 +91,15 @@ export function buildServer(): FastifyInstance {
         .catch(() => {}),
     ]);
     const ok = checks.redis && checks.postgres && checks.clickhouse;
+    setGauge("dependency_redis_up", checks.redis ? 1 : 0);
+    setGauge("dependency_postgres_up", checks.postgres ? 1 : 0);
+    setGauge("dependency_clickhouse_up", checks.clickhouse ? 1 : 0);
     return { ok, checks };
+  });
+
+  // Aggregate-only diagnostics; no keys, identifiers, or payloads are exposed.
+  app.get("/metrics", async (_request, reply) => {
+    return reply.type("text/plain; version=0.0.4").send(prometheus());
   });
 
   // Action manifest for the snippet + mobile SDKs. Unknown key → empty array
@@ -148,7 +158,9 @@ export function buildServer(): FastifyInstance {
     }
     const body = request.body as {
       entry?: {
-        changes?: { value?: { messages?: { from?: string; text?: { body?: string } }[] } }[];
+        changes?: {
+          value?: { messages?: { id?: string; from?: string; text?: { body?: string } }[] };
+        }[];
       }[];
     };
     for (const entry of body.entry ?? []) {
@@ -166,7 +178,7 @@ export function buildServer(): FastifyInstance {
               peekHandoffProject,
               projectForWaId,
             );
-            if (projectId) await handleInbound(projectId, from, text);
+            if (projectId) await handleInbound(projectId, from, text, msg.id);
           } catch (err) {
             // Audit M3: one bad message must not fail the whole batch.
             console.error("whatsapp inbound failed", err);
@@ -181,15 +193,16 @@ export function buildServer(): FastifyInstance {
   // allowed only outside production AND in simulator mode — never in prod.
   app.post("/v1/whatsapp/simulate", async (request, reply) => {
     if (!simulateAllowed()) return reply.code(404).send({ error: "not found" });
-    const { key, from, text } = (request.body ?? {}) as {
+    const { key, from, text, messageId } = (request.body ?? {}) as {
       key?: string;
       from?: string;
       text?: string;
+      messageId?: string;
     };
     if (!key || !from || !text) return reply.code(400).send({ error: "invalid" });
     const ref = await resolveKey(key);
     if (!ref) return reply.code(404).send({ error: "unknown" });
-    await handleInbound(ref.projectId, from, text);
+    await handleInbound(ref.projectId, from, text, messageId);
     return reply.send({ ok: true });
   });
 
@@ -223,25 +236,61 @@ export function buildServer(): FastifyInstance {
   });
 
   app.post("/v1/events", async (request, reply) => {
-    // Always 202 on the happy path and on benign drops — never leak key validity
-    // or validation detail to arbitrary origins.
+    const started = performance.now();
+    inc("http_events_requests_total");
+    // Keep the happy path and benign unknown-key drop non-disclosing; malformed
+    // or unavailable requests return retryable diagnostics without payloads.
     const parsed = eventBatchSchema.safeParse(request.body);
-    if (!parsed.success) return reply.code(400).send({ error: "invalid event batch" });
+    if (!parsed.success) {
+      inc("events_rejected_total");
+      return reply.code(400).send({ error: "invalid event batch" });
+    }
     const batch = parsed.data;
+    const protocol = protocolCompatibility(batch.protocolVersion);
+    if (!protocol.accepted) {
+      inc("events_rejected_total");
+      return reply.code(400).send({ error: "unsupported protocol version" });
+    }
 
-    if (!(await allowRequest(batch.key))) return reply.code(429).send({ ok: false });
+    if (!(await allowRequest(batch.key))) {
+      inc("events_rate_limited_total");
+      return reply.code(429).send({ ok: false });
+    }
 
     const ref = await resolveKey(batch.key);
-    if (!ref) return reply.code(202).send({ ok: true });
+    if (!ref) {
+      inc("events_unknown_key_total");
+      return reply.code(202).send({ ok: true });
+    }
 
     const ua = request.headers["user-agent"] ?? "";
     let normalized: ReturnType<typeof normalizeBatch>;
     try {
       normalized = normalizeBatch(batch, ref, ua, Date.now());
-    } catch {
+    } catch (error) {
+      inc("events_rejected_total");
+      if (error instanceof EventIdentityConflict) {
+        inc("events_identity_conflicts_total");
+        return reply.code(409).send({ error: "event id conflict" });
+      }
       return reply.code(400).send({ error: "invalid event time" });
     }
-    const events = await acceptEvents(normalized);
+    let events: ReturnType<typeof normalizeBatch>;
+    try {
+      events = await acceptEvents(normalized);
+    } catch (error) {
+      if (error instanceof EventIdentityConflict) {
+        inc("events_identity_conflicts_total");
+        observe("event_acceptance_latency_ms", performance.now() - started);
+        return reply.code(409).send({ error: "event id conflict" });
+      }
+      inc("events_acceptance_failures_total");
+      observe("event_acceptance_latency_ms", performance.now() - started);
+      return reply.code(503).send({ ok: false, error: "temporarily unavailable" });
+    }
+    inc("events_accepted_total", events.length);
+    inc("events_duplicate_total", normalized.length - events.length);
+    observe("event_acceptance_latency_ms", performance.now() - started);
 
     // Full rows enter the durable inbox; the live channel gets only a projection —
     // never the raw row (Audit M1: no UA / org_id / received_at to the client).
@@ -264,7 +313,9 @@ export function buildServer(): FastifyInstance {
       );
     }
     // The database commit is the durable acknowledgment; pub/sub is optional.
-    await pipeline.exec().catch(() => {});
+    await pipeline.exec().catch(() => {
+      inc("redis_live_publish_failures_total", events.length > 0 ? 1 : 0);
+    });
 
     for (const e of events) {
       if (e.type === "identify" && e.user_id) {

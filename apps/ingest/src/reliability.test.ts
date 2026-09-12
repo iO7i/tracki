@@ -1,7 +1,7 @@
 import { type EventBatch, eventBatchSchema } from "@tracki/shared";
 import { describe, expect, it } from "vitest";
 import { detectBatch } from "./detector";
-import { normalizeBatch } from "./normalize";
+import { eventPayloadHash, normalizeBatch } from "./normalize";
 import { scrubString, scrubValue } from "./scrub";
 import { InMemoryStateStore } from "./state";
 
@@ -123,6 +123,24 @@ describe("normalization and detection regression", () => {
     expect(normalizeBatch(batch(), { ...ref, projectId: "other" }, "", now)[0]?.event_id).not.toBe(
       a[0]?.event_id,
     );
+  });
+  it("rejects explicit event-ID reuse when the payload changes", () => {
+    const input = batch([8000]);
+    const source = input.events[0];
+    if (!source) throw new Error("missing fixture");
+    input.events = [
+      { ...source, eventId: "same_event", props: { tag: "button", id: "pay" } },
+      { ...source, eventId: "same_event", props: { tag: "button", id: "refund" } },
+    ];
+    expect(() => normalizeBatch(input, ref, "", now)).toThrow("event id reused");
+  });
+  it("hashes the normalized identity payload independently of acceptance time", () => {
+    const [event] = normalizeBatch(batch([8000]), ref, "", now);
+    if (!event) throw new Error("missing event");
+    expect(eventPayloadHash(event)).toBe(
+      eventPayloadHash({ ...event, received_at: event.received_at + 10_000 }),
+    );
+    expect(eventPayloadHash({ ...event, path: "/refund" })).not.toBe(eventPayloadHash(event));
   });
   it("rejects abusive session identifiers", () => {
     for (const sessionId of ["", "x".repeat(65), "other:session", "a\nb", "a/b"]) {

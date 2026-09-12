@@ -55,15 +55,17 @@ reference asserts the same files in `packages/mobile-core/src/conformance.test.t
 
 | SDK | Path | Language | Test command | Status |
 |---|---|---|---|---|
-| React Native | (wraps `@tracki/mobile-core`) | TypeScript | `pnpm test` (mobile-core) | **verified** (compile + test in CI) |
-| Flutter | `sdks/flutter` | Dart | `dart test` | **source-complete** (not compile-verified) |
-| iOS | `sdks/ios` | Swift | `swift test` | **source-complete** (not compile-verified) |
-| Android | `sdks/android` | Kotlin | `./gradlew test` | **source-complete** (not compile-verified) |
+| React Native | (wraps `@tracki/mobile-core`) | TypeScript | `pnpm test` (mobile-core) | **locally unit/type verified**; adapter has no native module |
+| Flutter | `sdks/flutter` | Dart | `dart test` + native workflow | **native consumer job defined; runner result required** |
+| iOS | `sdks/ios` | Swift | `swift test` + native workflow | **native consumer job defined; runner result required** |
+| Android | `sdks/android` | Kotlin | `gradle -p sdks/android test` + native workflow | **JVM locally verified; consumer job result required** |
 
-> **Source-complete, not compile-verified:** the Flutter/Swift/Kotlin SDKs
-> implement the protocol and ship conformance tests, but no Flutter/Xcode/Gradle
-> toolchain runs in CI yet (tracked follow-up). Until native CI lands, treat the
-> TypeScript `@tracki/mobile-core` as the reference of record.
+> Native status is deliberately conditional: `.github/workflows/native.yml`
+> defines the Flutter APK, Swift/iOS consumer, and Android consumer jobs, but
+> this Windows checkout has no Flutter/Xcode/Gradle toolchains and no green
+> supported-runner result is claimed here. Treat the TypeScript
+> `@tracki/mobile-core` as the locally verified reference of record until those
+> jobs complete.
 
 ## Layout
 

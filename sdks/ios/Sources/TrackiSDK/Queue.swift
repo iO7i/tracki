@@ -19,6 +19,7 @@ public final class EventQueue: @unchecked Sendable {
     private let device: DeviceInfo
     private let transport: Transport
     private let now: Clock
+    private let newId: IdFactory
 
     private var buffer: [EventInput] = []
     private var timer: DispatchSourceTimer?
@@ -33,7 +34,8 @@ public final class EventQueue: @unchecked Sendable {
         identity: Identity,
         device: DeviceInfo,
         transport: Transport,
-        now: @escaping Clock
+        now: @escaping Clock,
+        newId: @escaping IdFactory = defaultIdFactory
     ) {
         self.key = key
         self.eventsUrl = eventsUrl
@@ -41,6 +43,7 @@ public final class EventQueue: @unchecked Sendable {
         self.device = device
         self.transport = transport
         self.now = now
+        self.newId = newId
     }
 
     public func setResponseHandler(_ fn: @escaping (Any?) -> Void) {
@@ -49,8 +52,17 @@ public final class EventQueue: @unchecked Sendable {
 
     public func enqueue(_ event: EventInput) {
         identity.touchSession()
+        let identified = EventInput(
+            eventId: event.eventId ?? newId("evt"),
+            type: event.type,
+            ts: event.ts,
+            path: event.path,
+            url: event.url,
+            referrer: event.referrer,
+            props: event.props
+        )
         lock.lock()
-        buffer.append(event)
+        buffer.append(identified)
         let count = buffer.count
         lock.unlock()
         if count >= flushSize {
@@ -93,6 +105,7 @@ public final class EventQueue: @unchecked Sendable {
             while i < events.count {
                 let end = min(i + maxBatch, events.count)
                 let batch = Batch(
+                    protocolVersion: 1,
                     key: key,
                     anonId: identity.getAnonId(),
                     userId: identity.getUserId(),

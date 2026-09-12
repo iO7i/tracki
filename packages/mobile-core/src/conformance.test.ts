@@ -13,6 +13,7 @@ import type { Batch, ChatIntent, KeyValueStorage, Transport } from "./types";
 const dir = join(__dirname, "../../../sdks/conformance");
 const journey = JSON.parse(readFileSync(join(dir, "journey-batch.json"), "utf8"));
 const channels = JSON.parse(readFileSync(join(dir, "channel-requests.json"), "utf8"));
+const protocol = JSON.parse(readFileSync(join(dir, "protocol-compatibility.json"), "utf8"));
 
 function memoryStorage(): KeyValueStorage {
   const data = new Map<string, string>();
@@ -73,10 +74,8 @@ describe("conformance: journey-batch.json", () => {
     const ids = batch.events.map((event) => event.eventId);
     expect(ids.every((id) => typeof id === "string" && /^evt_[A-Za-z0-9_-]+$/.test(id))).toBe(true);
     expect(new Set(ids).size).toBe(batch.events.length);
-    // The optional identity extension leaves every legacy protocol field unchanged.
-    expect({ ...batch, events: batch.events.map(({ eventId, ...event }) => event) }).toEqual(
-      journey.expectedBatch,
-    );
+    expect(batch).toEqual(journey.expectedBatch);
+    expect(batch.protocolVersion).toBe(protocol.protocolVersion);
   });
 });
 

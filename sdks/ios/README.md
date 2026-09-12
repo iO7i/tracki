@@ -4,11 +4,10 @@ Swift port of `@tracki/mobile-core` — the headless protocol engine for Tracki'
 behavioral-intelligence platform. Swift concurrency (async/await), zero
 third-party dependencies; storage / transport / clock / id-factory are injected.
 
-> **Status: source-complete, NOT compile-verified** — this SDK implements
-> `docs/mobile-wire-protocol.md` and ships conformance tests against
-> `sdks/conformance/`, but no Flutter/Xcode/Gradle toolchain runs in CI yet.
-> Treat the TypeScript `@tracki/mobile-core` as the reference until native CI
-> lands.
+> **Status: source-complete; compile and iOS consumer resolution run in heavy CI** — this SDK
+> implements `docs/mobile-wire-protocol.md` and ships conformance tests against
+> `sdks/conformance/`. The native job is the compile evidence; this Windows
+> checkout has no local Swift/Xcode toolchain.
 
 ## Quickstart
 

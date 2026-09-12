@@ -8,6 +8,7 @@ import {
 } from "@tracki/shared";
 import { REDIS_KEYS } from "./config.js";
 import { matchForContext } from "./matcher.js";
+import { inc } from "./metrics.js";
 import { getSegmentDefinition, liveStruggleActionsForProject } from "./pg.js";
 import { redis } from "./redis.js";
 
@@ -63,8 +64,12 @@ async function matchesSegment(
  * /v1/events flush. Off the ack path; failures are swallowed.
  */
 export async function computeAssist(ch: ClickHouseClient, s: StruggleDetection): Promise<void> {
+  inc("intervention_attempts_total");
   const actions = await struggleActions(s.project_id);
-  if (actions.length === 0) return;
+  if (actions.length === 0) {
+    inc("intervention_no_matching_action_total");
+    return;
+  }
 
   for (const { id, def } of actions) {
     if (def.urlContains && !s.path.includes(def.urlContains)) continue;
@@ -80,7 +85,10 @@ export async function computeAssist(ch: ClickHouseClient, s: StruggleDetection):
     // session (snippet dedupes per page-load only). SET NX is the gate.
     const capKey = `assistcap:${s.project_id}:${s.session_id}:${id}`;
     const fresh = await redis().set(capKey, "1", "EX", ASSIST_CAP_TTL_SEC, "NX");
-    if (fresh !== "OK") return;
+    if (fresh !== "OK") {
+      inc("intervention_frequency_cap_suppressed_total");
+      return;
+    }
 
     const match = await matchForContext(
       s.project_id,
@@ -106,6 +114,7 @@ export async function computeAssist(ch: ClickHouseClient, s: StruggleDetection):
       "EX",
       ASSIST_TTL_SEC,
     );
+    inc("intervention_triggered_total");
     return; // first matching action wins
   }
 }

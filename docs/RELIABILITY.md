@@ -4,9 +4,9 @@
 
 The browser and TypeScript mobile core assign an `eventId` before the first send. Clients must reuse it for every retry and never reuse it for a different event. Ingress derives a deterministic identity from organization, project, and client event ID. A PostgreSQL unique constraint accepts each identity once, including overlapping concurrent batches. The first accepted payload and normalized timestamps win. HTTP 202 follows the acceptance transaction, not completion of analytics processing. An unknown public key retains the existing non-disclosing 202 response but does not accept telemetry.
 
-Legacy clients without IDs remain supported: a canonical event fingerprint, envelope `sentAt`, and identical-event occurrence index identify exact-envelope retries. Two identical events in one legacy batch remain distinct. Arbitrary rebatching or changing `sentAt` cannot guarantee legacy idempotency; upgrade clients for that guarantee. Swift, Kotlin, and Flutter sources have not been compile-verified or upgraded to this identity extension.
+Legacy clients without IDs remain supported: a canonical event fingerprint, envelope `sentAt`, and identical-event occurrence index identify exact-envelope retries. Two identical events in one legacy batch remain distinct. Arbitrary rebatching or changing `sentAt` cannot guarantee legacy idempotency; upgrade clients for that guarantee. Swift, Kotlin, and Flutter now assign and serialize stable IDs before first send; their native consumer builds are covered by `.github/workflows/native.yml`.
 
-Completed ledger rows retain identities indefinitely and clear their payload. This prevents resurrection after ClickHouse retention. Capacity planning and explicit project-erasure cleanup are necessary; there is no automatic foreign-key cascade for telemetry tables. Do not prune the ledger while claiming indefinite replay protection. PostgreSQL must use durable storage, normal WAL/synchronous commit, backups, and an appropriate recovery policy; the application cannot preserve data across loss of that database.
+Completed ledger rows retain identities indefinitely and clear their payload while retaining a normalized payload hash. This prevents resurrection after ClickHouse retention and rejects a later explicit-ID reuse with changed content. Rows created before the hash column was introduced retain legacy duplicate-only behavior until explicitly backfilled. Capacity planning and explicit project-erasure cleanup are necessary; there is no automatic foreign-key cascade for telemetry tables. Do not prune the ledger while claiming indefinite replay protection. PostgreSQL must use durable storage, normal WAL/synchronous commit, backups, and an appropriate recovery policy; the application cannot preserve data across loss of that database.
 
 ## Ownership, recovery, and ordering
 
@@ -36,6 +36,22 @@ WHERE project_id = '<project>' AND event_id = '<event>'
 
 An older requeued event is still subject to the watermark policy. Recomputing historical detections is not implemented. Live Redis notifications, contextual assistance, and identity-profile enrichment remain best effort and are outside the durable analytics transaction. They are not an external-message delivery guarantee.
 
+## External side effects and replay
+
+Inbound WhatsApp webhook deliveries carry the provider message ID into
+`wa_messages.provider_message_id`, protected by a unique index. A repeated
+provider delivery is therefore a durable no-op before handoff consumption or a
+new Agent reply. Simulator injection accepts `messageId` so the same replay
+invariant can be exercised offline. Outbound rows carry a derived local
+`effect_id` and a sent/failed status for auditability.
+
+The external WhatsApp API is still an at-least-once boundary: a process crash
+after the provider accepts a message but before Tracki records the outbound row
+cannot be atomically coordinated with Meta. Tracki does not claim distributed
+exactly-once delivery. If provider-side idempotency becomes available, the
+stored effect ID is the key to pass through that contract; until then, use the
+outbound status/effect audit and provider logs during incident reconciliation.
+
 ## Time and session trust
 
 `ts` is validated event time; `received_at` is server acceptance time. Inbox `created_at` and `completed_at` expose queue/processing timing. Required timestamps must be positive safe integers. Events older than 24 hours or more than two minutes ahead of arrival are rejected with HTTP 400; missing/malformed timestamps are not silently replaced. A positive envelope clock skew of up to two minutes is subtracted uniformly, preserving event spacing. Negative skew remains part of event time and the age limit. Keep client clocks synchronized.
@@ -63,4 +79,4 @@ The browser scrubs before persisting. A consent-granted queue keeps at most 200 
 
 ## Verification boundaries
 
-CI runs lint, type checks, unit regressions, production build, real PostgreSQL/Redis/ClickHouse regressions, and Chromium E2E. Infrastructure tests cover concurrent replay, partial retries, normalization-to-detection timing, masking, worker ownership, rollback after insert, terminated database connections, detection-write recovery, late events, dead letters, isolation, and populated legacy migration. Browser tests include a deliberate HTTP outage followed by a real ingestion retry. Hosted model accuracy, external messaging delivery, native toolchain builds, sustained load, disaster recovery, and simultaneous-tab persistence are not established by these tests. No production throughput benchmark is claimed.
+CI runs lint, type checks, unit regressions, bounded fuzz/holdout checks, production build, real PostgreSQL/Redis/ClickHouse regressions, Chromium E2E, and a separate native consumer workflow. Infrastructure tests cover concurrent replay, partial retries, normalization-to-detection timing, masking, worker ownership, rollback after insert, terminated database connections, detection-write recovery, late events, dead letters, isolation, and populated legacy migration. Browser tests include a deliberate HTTP outage followed by a real ingestion retry. Hosted model accuracy, external messaging delivery, sustained load, disaster recovery, and simultaneous-tab persistence are not established by these tests. Synthetic operational benchmarks are reproducible but are not production throughput evidence until their generated reports are run against a configured stack and reviewed.

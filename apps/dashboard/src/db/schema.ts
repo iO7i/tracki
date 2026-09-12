@@ -276,9 +276,19 @@ export const waMessages = pgTable(
     // Outbound delivery status (sent | failed) so the inbox never shows an
     // undelivered reply as sent (Audit M2). Inbound rows are always 'sent'.
     status: text("status").notNull().default("sent"),
+    // Provider delivery identity for webhook replay deduplication. Nullable
+    // because simulator traffic and legacy rows have no provider id.
+    providerMessageId: text("provider_message_id"),
+    // Local side-effect identity. This is a durable audit key, not a claim
+    // that the external provider offers exactly-once delivery.
+    effectId: text("effect_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("wa_messages_conversation_idx").on(t.conversationId, t.createdAt)],
+  (t) => [
+    index("wa_messages_conversation_idx").on(t.conversationId, t.createdAt),
+    uniqueIndex("wa_messages_provider_message_id_uidx").on(t.providerMessageId),
+    uniqueIndex("wa_messages_effect_id_uidx").on(t.effectId),
+  ],
 );
 
 /**

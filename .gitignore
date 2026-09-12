@@ -17,6 +17,11 @@ playwright-report/
 test-results/
 e2e/.auth/
 
+# Generated operational evidence is kept locally in named run directories and
+# must not be mixed into source lint or accidentally committed as source.
+evidence/*
+!evidence/README.md
+
 # misc
 .DS_Store
 Thumbs.db

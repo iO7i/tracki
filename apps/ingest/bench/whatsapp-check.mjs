@@ -43,8 +43,10 @@ async function main() {
 
   // 2) Simulated inbound carrying the code → links context + Agent first-response.
   const waId = "966500001122";
+  const firstMessage = `مرحباً، رقم استفساري: ${ho.inquiryCode} كيف ادفع`;
+  const firstMessageId = "wamid.synthetic-first";
   await post("/v1/whatsapp/simulate", {
-    key, from: waId, text: `مرحباً، رقم استفساري: ${ho.inquiryCode} كيف ادفع`,
+    key, from: waId, text: firstMessage, messageId: firstMessageId,
   });
   await new Promise((r) => setTimeout(r, 800));
 
@@ -59,6 +61,28 @@ async function main() {
     const agentReply = msgs.find((m) => m.direction === "outbound" && m.author === "agent");
     if (!hasInbound) fail("inbound customer message not stored");
     if (!agentReply) fail("Agent did not first-respond");
+
+    // Provider retries must not claim the handoff or trigger a second Agent
+    // reply. The simulator uses the same durable provider message identity.
+    const beforeReplay = await sql`
+      SELECT count(*) FILTER (WHERE direction = 'inbound') AS inbound_count,
+             count(*) FILTER (WHERE direction = 'outbound' AND author = 'agent') AS agent_count
+      FROM wa_messages WHERE conversation_id = ${convo[0].id}`;
+    const replay = await post("/v1/whatsapp/simulate", {
+      key, from: waId, text: firstMessage, messageId: firstMessageId,
+    });
+    if (!replay.ok) fail(`provider replay rejected (${replay.status})`);
+    await new Promise((r) => setTimeout(r, 300));
+    const afterReplay = await sql`
+      SELECT count(*) FILTER (WHERE direction = 'inbound') AS inbound_count,
+             count(*) FILTER (WHERE direction = 'outbound' AND author = 'agent') AS agent_count
+      FROM wa_messages WHERE conversation_id = ${convo[0].id}`;
+    if (afterReplay[0]?.inbound_count !== beforeReplay[0]?.inbound_count) {
+      fail("provider replay created a second inbound message");
+    }
+    if (afterReplay[0]?.agent_count !== beforeReplay[0]?.agent_count) {
+      fail("provider replay triggered a second Agent reply");
+    }
   }
 
   // 3) PII masked at rest (inject an email in an inbound).

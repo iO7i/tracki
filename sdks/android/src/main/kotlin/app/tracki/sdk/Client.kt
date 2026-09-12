@@ -174,6 +174,7 @@ suspend fun createTracki(
         transport = transport,
         now = now,
         scope = scope,
+        newId = newId,
     )
 
     val cta = CtaRouter(

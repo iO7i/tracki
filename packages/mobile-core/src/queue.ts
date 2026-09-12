@@ -24,6 +24,7 @@ export class EventQueue {
     private readonly device: DeviceInfo,
     private readonly transport: Transport,
     private readonly now: Clock,
+    private readonly newId: (prefix: string) => string = defaultIdFactory,
   ) {}
 
   setResponseHandler(fn: (data: unknown) => void): void {
@@ -31,7 +32,7 @@ export class EventQueue {
   }
 
   enqueue(event: EventInput): void {
-    const identified = { ...event, eventId: event.eventId ?? defaultIdFactory("evt") };
+    const identified = { ...event, eventId: event.eventId ?? this.newId("evt") };
     this.identity.touchSession();
     this.buffer.push(identified);
     if (this.buffer.length >= FLUSH_SIZE) {
@@ -55,6 +56,7 @@ export class EventQueue {
       for (let i = 0; i < events.length; i += MAX_BATCH) {
         const batch: Batch = {
           key: this.key,
+          protocolVersion: 1,
           anonId: this.identity.getAnonId(),
           userId: this.identity.getUserId(),
           sessionId: this.identity.currentSession(),

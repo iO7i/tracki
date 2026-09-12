@@ -11,6 +11,7 @@
     "./faq": "./src/faq.ts",
     "./text": "./src/text.ts",
     "./pii": "./src/pii.ts",
+    "./protocol": "./src/protocol.ts",
     "./rage": "./src/rage.ts"
   },
   "scripts": {

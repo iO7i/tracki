@@ -6,6 +6,7 @@ import { REDIS_KEYS } from "./config";
 import { detectBatch } from "./detector";
 import { DurableStateStore } from "./durable-state";
 import { maintainInbox } from "./inbox";
+import { inc, observe, setGauge } from "./metrics";
 import { pg } from "./pg";
 import { redis } from "./redis";
 
@@ -49,21 +50,44 @@ export async function processOne(sql: postgres.Sql, io: WorkerIO): Promise<boole
       // Late arrivals remain visible in analytics, but never rewrite prior detections.
       const watermarkKey = `watermark:${e.org_id}:${e.project_id}:${e.anon_id}`;
       const watermark = Number((await state.read(watermarkKey)) ?? 0);
+      const detectorStarted = performance.now();
       const detections = e.ts < watermark ? [] : await detectBatch(state, [e]);
+      observe("detector_latency_ms", performance.now() - detectorStarted);
+      inc("detector_events_total");
+      inc("detector_detections_total", detections.length);
       await state.write(watermarkKey, Math.max(watermark, e.ts));
-      await io.events([e]);
-      await io.struggles(detections);
+      const eventsWriteStarted = performance.now();
+      try {
+        await io.events([e]);
+        observe("clickhouse_events_write_latency_ms", performance.now() - eventsWriteStarted);
+      } catch (error) {
+        inc("clickhouse_events_write_failures_total");
+        throw error;
+      }
+      const strugglesWriteStarted = performance.now();
+      try {
+        await io.struggles(detections);
+        observe("clickhouse_struggles_write_latency_ms", performance.now() - strugglesWriteStarted);
+      } catch (error) {
+        inc("clickhouse_struggles_write_failures_total");
+        throw error;
+      }
       await io.beforeAck?.(tx);
       await tx`UPDATE telemetry_inbox SET completed_at=now(),payload=NULL WHERE project_id=${e.project_id} AND event_id=${e.event_id}`;
+      inc("events_processed_total");
       return true;
     })) as boolean;
   } catch {
     if (owned) {
       try {
-        await sql`UPDATE telemetry_inbox SET attempts=attempts+1,
+        const retryRows = await sql`UPDATE telemetry_inbox SET attempts=attempts+1,
         available_at=now()+least(300,power(2,attempts+1))*interval '1 second',
         dead_at=CASE WHEN attempts+1>=5 THEN now() ELSE NULL END
-        WHERE project_id=${owned.project} AND event_id=${owned.id} AND completed_at IS NULL AND dead_at IS NULL`;
+        WHERE project_id=${owned.project} AND event_id=${owned.id} AND completed_at IS NULL AND dead_at IS NULL
+        RETURNING attempts, dead_at`;
+        const retry = retryRows[0];
+        if (retry?.dead_at) inc("events_dead_lettered_total");
+        else if (retry) inc("events_retried_total");
       } catch {
         // Database outage must not terminate the worker loop. The rolled-back item
         // remains pending; failure accounting resumes when PostgreSQL recovers.
@@ -82,6 +106,7 @@ export function startWorker(): { stop: () => Promise<void> } {
   const sql = pg();
   const loop = (async () => {
     let maintenanceAt = 0;
+    let metricsAt = 0;
     while (running) {
       if (Date.now() >= maintenanceAt) {
         try {
@@ -91,14 +116,32 @@ export function startWorker(): { stop: () => Promise<void> } {
         }
         maintenanceAt = Date.now() + 300_000;
       }
+      if (Date.now() >= metricsAt) {
+        try {
+          const rows = await sql<{ pending: string; oldest_age_seconds: string | null }[]>`
+            SELECT count(*) FILTER (WHERE completed_at IS NULL AND dead_at IS NULL) AS pending,
+                   EXTRACT(EPOCH FROM (now() - min(created_at) FILTER (WHERE completed_at IS NULL AND dead_at IS NULL))) AS oldest_age_seconds
+            FROM telemetry_inbox`;
+          setGauge("pending_events", Number(rows[0]?.pending ?? 0));
+          setGauge("oldest_pending_age_seconds", Number(rows[0]?.oldest_age_seconds ?? 0));
+        } catch {
+          inc("metrics_database_errors_total");
+        }
+        metricsAt = Date.now() + 5_000;
+      }
       const detections: StruggleDetection[] = [];
-      const done = await processOne(sql, {
-        events: (e) => insertEvents(ch, e),
-        struggles: async (s) => {
-          await insertStruggles(ch, s);
-          detections.push(...s);
-        },
-      });
+      let done = false;
+      try {
+        done = await processOne(sql, {
+          events: (e) => insertEvents(ch, e),
+          struggles: async (s) => {
+            await insertStruggles(ch, s);
+            detections.push(...s);
+          },
+        });
+      } catch {
+        inc("worker_iteration_failures_total");
+      }
       // Optional live delivery is best effort; durable analytics are already committed.
       if (done)
         for (const s of detections) {
@@ -106,6 +149,7 @@ export function startWorker(): { stop: () => Promise<void> } {
             await redis().publish(REDIS_KEYS.struggleChannel(s.project_id), JSON.stringify(s));
             await computeAssist(ch, s);
           } catch {
+            inc("redis_or_intervention_failures_total");
             console.error("optional live assistance unavailable");
           }
         }

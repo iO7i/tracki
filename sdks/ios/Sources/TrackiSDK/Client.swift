@@ -73,7 +73,8 @@ public final class Tracki: @unchecked Sendable {
             identity: identity,
             device: config.device,
             transport: transport,
-            now: now
+            now: now,
+            newId: newId
         )
 
         // currentPath is read lazily via a holder captured by the closures below.

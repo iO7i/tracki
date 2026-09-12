@@ -164,6 +164,8 @@ export type DeviceContext = z.infer<typeof deviceContextSchema>;
 export const eventBatchSchema = z.object({
   // Project public key (pk_…) — resolved server-side to org/project.
   key: z.string().min(3).max(64),
+  // Optional for legacy producers; current SDKs send the negotiated v1 value.
+  protocolVersion: z.number().int().positive().optional(),
   anonId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
   userId: z.string().min(1).max(128).optional(),
   sessionId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),

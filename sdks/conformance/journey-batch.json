@@ -22,6 +22,7 @@
     { "call": "identify", "args": ["user_42"] }
   ],
   "expectedBatch": {
+    "protocolVersion": 1,
     "key": "pk_conformance",
     "anonId": "anon_1",
     "userId": "user_42",
@@ -34,18 +35,44 @@
       "model": "iPhone15,2"
     },
     "events": [
-      { "type": "app_foreground", "ts": 1700000000000, "path": "/", "props": { "launch": "cold" } },
-      { "type": "screen_view", "ts": 1700000001000, "path": "/Home" },
       {
+        "eventId": "evt_1",
+        "type": "app_foreground",
+        "ts": 1700000000000,
+        "path": "/",
+        "props": { "launch": "cold" }
+      },
+      { "eventId": "evt_2", "type": "screen_view", "ts": 1700000001000, "path": "/Home" },
+      {
+        "eventId": "evt_3",
         "type": "screen_leave",
         "ts": 1700000002000,
         "path": "/Home",
         "props": { "durationMs": 1000 }
       },
-      { "type": "screen_view", "ts": 1700000002000, "path": "/Checkout", "referrer": "/Home" },
-      { "type": "otp_fail", "ts": 1700000003000, "path": "/Checkout", "referrer": "/Home" },
-      { "type": "otp_fail", "ts": 1700000004000, "path": "/Checkout", "referrer": "/Home" },
       {
+        "eventId": "evt_4",
+        "type": "screen_view",
+        "ts": 1700000002000,
+        "path": "/Checkout",
+        "referrer": "/Home"
+      },
+      {
+        "eventId": "evt_5",
+        "type": "otp_fail",
+        "ts": 1700000003000,
+        "path": "/Checkout",
+        "referrer": "/Home"
+      },
+      {
+        "eventId": "evt_6",
+        "type": "otp_fail",
+        "ts": 1700000004000,
+        "path": "/Checkout",
+        "referrer": "/Home"
+      },
+      {
+        "eventId": "evt_7",
         "type": "payment_fail",
         "ts": 1700000005000,
         "path": "/Checkout",
@@ -53,6 +80,7 @@
         "props": { "method": "mada" }
       },
       {
+        "eventId": "evt_8",
         "type": "flow_abandon",
         "ts": 1700000006000,
         "path": "/Checkout",
@@ -60,13 +88,20 @@
         "props": { "flow": "checkout" }
       },
       {
+        "eventId": "evt_9",
         "type": "track",
         "ts": 1700000007000,
         "path": "/Checkout",
         "referrer": "/Home",
         "props": { "name": "purchase" }
       },
-      { "type": "identify", "ts": 1700000008000, "path": "/Checkout", "referrer": "/Home" }
+      {
+        "eventId": "evt_10",
+        "type": "identify",
+        "ts": 1700000008000,
+        "path": "/Checkout",
+        "referrer": "/Home"
+      }
     ]
   }
 }

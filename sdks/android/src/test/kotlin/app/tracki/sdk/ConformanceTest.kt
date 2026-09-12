@@ -153,6 +153,10 @@ class ConformanceTest {
         assertEquals(1, batches.size)
         val journey = loadFixture("journey-batch.json")
         assertEquals(journey["expectedBatch"], batches[0].body)
+        val protocol = loadFixture("protocol-compatibility.json")
+        @Suppress("UNCHECKED_CAST")
+        val body = batches[0].body as Map<String, Any?>
+        assertEquals(protocol["protocolVersion"], body["protocolVersion"])
     }
 
     @Test

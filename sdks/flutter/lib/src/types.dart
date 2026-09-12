@@ -62,6 +62,8 @@ class DeviceInfo {
 /// A single queued event. `path`/`referrer`/`url`/`props` are omitted from the
 /// serialized JSON when null (the wire protocol forbids explicit nulls).
 class EventInput {
+  /// Stable client identity. Reused for every retry of this event.
+  final String? eventId;
   final String type;
   final int ts;
   final String? path;
@@ -70,6 +72,7 @@ class EventInput {
   final Map<String, Object?>? props;
 
   const EventInput({
+    this.eventId,
     required this.type,
     required this.ts,
     this.path,
@@ -79,7 +82,11 @@ class EventInput {
   });
 
   Map<String, Object?> toJson() {
-    final m = <String, Object?>{'type': type, 'ts': ts};
+    final m = <String, Object?>{
+      if (eventId != null) 'eventId': eventId,
+      'type': type,
+      'ts': ts,
+    };
     if (path != null) m['path'] = path;
     if (url != null) m['url'] = url;
     if (referrer != null) m['referrer'] = referrer;
@@ -90,6 +97,7 @@ class EventInput {
 
 /// The `/v1/events` batch envelope. `userId` is omitted when anonymous.
 class Batch {
+  final int protocolVersion;
   final String key;
   final String anonId;
   final String? userId;
@@ -99,6 +107,7 @@ class Batch {
   final List<EventInput> events;
 
   const Batch({
+    this.protocolVersion = 1,
     required this.key,
     required this.anonId,
     this.userId,
@@ -110,6 +119,7 @@ class Batch {
 
   Map<String, Object?> toJson() {
     final m = <String, Object?>{
+      'protocolVersion': protocolVersion,
       'key': key,
       'anonId': anonId,
     };

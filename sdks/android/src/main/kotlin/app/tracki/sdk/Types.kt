@@ -52,6 +52,8 @@ data class DeviceInfo(
  * serialized JSON when null (the wire protocol forbids explicit nulls).
  */
 data class EventInput(
+    /** Stable client identity. Reused for every retry of this event. */
+    val eventId: String? = null,
     val type: String,
     val ts: Long,
     val path: String? = null,
@@ -61,6 +63,7 @@ data class EventInput(
 ) {
     fun toJson(): Map<String, Any?> {
         val m = linkedMapOf<String, Any?>("type" to type, "ts" to ts)
+        if (eventId != null) m["eventId"] = eventId
         if (path != null) m["path"] = path
         if (url != null) m["url"] = url
         if (referrer != null) m["referrer"] = referrer
@@ -71,6 +74,7 @@ data class EventInput(
 
 /** The `/v1/events` batch envelope. `userId` is omitted when anonymous. */
 data class Batch(
+    val protocolVersion: Int = 1,
     val key: String,
     val anonId: String,
     val userId: String?,
@@ -80,7 +84,7 @@ data class Batch(
     val events: List<EventInput>,
 ) {
     fun toJson(): Map<String, Any?> {
-        val m = linkedMapOf<String, Any?>("key" to key, "anonId" to anonId)
+        val m = linkedMapOf<String, Any?>("protocolVersion" to protocolVersion, "key" to key, "anonId" to anonId)
         if (userId != null) m["userId"] = userId
         m["sessionId"] = sessionId
         m["sentAt"] = sentAt

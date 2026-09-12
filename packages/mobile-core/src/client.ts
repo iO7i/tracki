@@ -40,6 +40,7 @@ export async function createTracki(config: TrackiConfig) {
     config.device,
     transport,
     now,
+    newId,
   );
 
   const ctaDeps = {

@@ -3,6 +3,14 @@ import type { EventBatch, ProjectRef, StoredEvent } from "@tracki/shared";
 import { sanitizeVertexTrack } from "@tracki/shared";
 import { scrubSerialized, scrubString, scrubValue } from "./scrub.js";
 
+/** The same explicit event ID was presented with a different event payload. */
+export class EventIdentityConflict extends Error {
+  constructor() {
+    super("event id reused for a different payload");
+    this.name = "EventIdentityConflict";
+  }
+}
+
 /**
  * For a `track` event, enforce a recognized named-event schema (currently the
  * Vertex tenant) at the edge: drop every prop not on the privacy-safe allowlist
@@ -77,6 +85,7 @@ export function normalizeBatch(
       throw new Error("invalid event time");
   }
   const occurrences = new Map<string, number>();
+  const explicitIdentities = new Map<string, string>();
   // implementation: mobile SDKs send a device block; absent ⇒ a browser batch. The
   // mobile "ua" is a coarse platform/os pair built server-side from the schema-
   // bounded device fields (never the raw UA header for app traffic).
@@ -88,6 +97,13 @@ export function normalizeBatch(
   const appVersion = device?.appVersion ?? "";
   const deviceModel = device?.model ?? "";
   return batch.events.map((e) => {
+    if (e.eventId) {
+      const { eventId: _eventId, ...withoutId } = e;
+      const payloadIdentity = canonical([batch.anonId, batch.sessionId, withoutId]);
+      const previous = explicitIdentities.get(e.eventId);
+      if (previous && previous !== payloadIdentity) throw new EventIdentityConflict();
+      explicitIdentities.set(e.eventId, payloadIdentity);
+    }
     const props = normalizeProps(e.type, e.props);
     const fingerprint = canonical({ anon: batch.anonId, session: batch.sessionId, event: e });
     const ordinal = occurrences.get(fingerprint) ?? 0;
@@ -116,6 +132,18 @@ export function normalizeBatch(
       received_at: receivedAt,
     };
   });
+}
+
+/**
+ * Hash the normalized payload without acceptance-time metadata or the derived
+ * identity. The inbox keeps this digest after clearing the full payload so a
+ * later replay can distinguish a harmless duplicate from explicit-ID reuse.
+ */
+export function eventPayloadHash(event: StoredEvent): string {
+  const payload = Object.fromEntries(
+    Object.entries(event).filter(([key]) => key !== "event_id" && key !== "received_at"),
+  );
+  return createHash("sha256").update(canonical(payload)).digest("hex");
 }
 
 function canonical(value: unknown): string {

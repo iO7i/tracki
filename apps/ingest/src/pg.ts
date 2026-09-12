@@ -273,11 +273,20 @@ export async function appendWaMessage(
   author: "customer" | "agent" | "operator",
   content: string,
   status: "sent" | "failed" = "sent",
-): Promise<void> {
-  await pg()`
-    INSERT INTO wa_messages (conversation_id, direction, author, content, status)
-    VALUES (${conversationId}, ${direction}, ${author}, ${content}, ${status})`;
+  providerMessageId?: string,
+  effectId?: string,
+): Promise<boolean> {
+  const inserted = await pg()<{ id: string }[]>`
+    INSERT INTO wa_messages
+      (conversation_id, direction, author, content, status, provider_message_id, effect_id)
+    VALUES
+      (${conversationId}, ${direction}, ${author}, ${content}, ${status},
+       ${providerMessageId ?? null}, ${effectId ?? null})
+    ON CONFLICT DO NOTHING
+    RETURNING id`;
+  if (inserted.length === 0) return false;
   await pg()`UPDATE wa_conversations SET last_at = now() WHERE id = ${conversationId}`;
+  return true;
 }
 
 /** Non-consuming lookup of a handoff's project by code (webhook routing). */

@@ -139,11 +139,13 @@ final class ConformanceTests: XCTestCase {
 
     func testProducesExpectedEventsBatch() async {
         let journey = loadFixture("journey-batch.json")
+        let protocolFixture = loadFixture("protocol-compatibility.json")
         let (_, transport) = await runJourney()
         let batches = transport.posts.filter { $0.url.hasSuffix("/v1/events") }
         XCTAssertEqual(batches.count, 1)
         let expected = journey["expectedBatch"] as! [String: Any]
         XCTAssertEqual(batches[0].body as NSDictionary, expected as NSDictionary)
+        XCTAssertEqual(batches[0].body["protocolVersion"] as? Int, protocolFixture["protocolVersion"] as? Int)
     }
 
     func testMintsExactWhatsAppHandoffBody() async {

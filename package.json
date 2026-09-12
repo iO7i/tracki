@@ -17,7 +17,12 @@
     "ch:migrate": "pnpm --filter @tracki/clickhouse ch:migrate",
     "snippet:build": "pnpm --filter @tracki/snippet build",
     "demo": "pnpm --filter @tracki/demo-site serve",
-    "e2e": "pnpm --filter @tracki/e2e e2e"
+    "e2e": "pnpm --filter @tracki/e2e e2e",
+    "ops:benchmark": "node bench/operations/run.mjs",
+    "ops:friction": "node apps/ingest/node_modules/tsx/dist/cli.mjs bench/operations/friction-benchmark.ts",
+    "ops:fuzz": "node apps/ingest/node_modules/tsx/dist/cli.mjs bench/operations/adversarial-fuzz.ts",
+    "ops:reconcile": "node bench/operations/reconcile.mjs",
+    "ops:whatsapp": "node apps/ingest/bench/whatsapp-check.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

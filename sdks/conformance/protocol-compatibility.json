@@ -1,0 +1,15 @@
+{
+  "protocolVersion": 1,
+  "minimumSupportedVersion": 1,
+  "cases": [
+    { "name": "current-v1", "version": 1, "accepted": true, "mode": "current" },
+    { "name": "legacy-no-version", "accepted": true, "mode": "legacy" },
+    { "name": "future-version", "version": 2, "accepted": false, "mode": "unsupported" }
+  ],
+  "identityRules": {
+    "eventIdRequiredBeforeFirstSend": true,
+    "retryReusesEventId": true,
+    "sameIdDifferentPayload": { "httpStatus": 409, "accepted": false },
+    "sameIdSamePayload": { "accepted": true, "duplicate": true }
+  }
+}

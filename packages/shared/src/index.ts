@@ -8,6 +8,7 @@ export * from "./journey";
 export * from "./rage";
 export * from "./text";
 export * from "./pii";
+export * from "./protocol";
 export * from "./revenue";
 export * from "./schemas";
 export * from "./session";

@@ -6,11 +6,11 @@ behavioral-intelligence platform. The core module is **pure Kotlin/JVM** (only
 JUnit; the Android adapter (`Adapter.kt`) holds the SharedPreferences storage and
 is the only file that touches `android.*` (a `compileOnly` dependency).
 
-> **Status: source-complete, NOT compile-verified** — this SDK implements
+> **Status: source-complete, JVM-verified locally; Android consumer verification runs in the heavy CI job** — this SDK implements
 > `docs/mobile-wire-protocol.md` and ships conformance tests against
-> `sdks/conformance/`, but no Flutter/Xcode/Gradle toolchain runs in CI yet.
-> Treat the TypeScript `@tracki/mobile-core` as the reference until native CI
-> lands.
+> `sdks/conformance/`, with a minimal Android consumer under `consumer/`.
+> The native job is the Android compile evidence; this Windows checkout has no
+> local Android SDK/Gradle toolchain.
 
 ## Quickstart
 

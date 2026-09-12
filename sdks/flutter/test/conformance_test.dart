@@ -144,6 +144,7 @@ Future<({TrackiClient client, _CapturingTransport transport})> _runJourney(
 void main() {
   final journey = _loadFixture('journey-batch.json');
   final channels = _loadFixture('channel-requests.json');
+  final protocol = _loadFixture('protocol-compatibility.json');
 
   test('pickVariant replicates the JS 32-bit hash exactly', () {
     // Known values computed from the TS reference logic:
@@ -162,6 +163,7 @@ void main() {
         .toList();
     expect(batches.length, 1);
     expect(batches.first['body'], equals(journey['expectedBatch']));
+    expect((batches.first['body'] as Map)['protocolVersion'], protocol['protocolVersion']);
   });
 
   test('mints the exact WhatsApp handoff body', () async {

@@ -181,6 +181,7 @@ Future<TrackiClient> createTracki(TrackiConfig config) async {
     device,
     transport,
     now,
+    newId,
   );
 
   final cta = CtaRouter(

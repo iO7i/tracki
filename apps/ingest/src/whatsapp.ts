@@ -64,14 +64,32 @@ export async function handleInbound(
   projectId: string,
   fromWaId: string,
   text: string,
+  providerMessageId?: string,
 ): Promise<void> {
+  const convo = await getOrCreateWaConversation(projectId, fromWaId, null, detectLang(text));
+  // Meta retries the same webhook delivery. Persisting the provider id under
+  // a unique constraint makes replay a no-op before any handoff claim or
+  // outbound provider call can happen twice.
+  const inserted = await appendWaMessage(
+    convo.id,
+    "inbound",
+    "customer",
+    maskPii(text),
+    "sent",
+    providerMessageId,
+  );
+  if (!inserted) return;
+
   const code = parseInquiryCode(text);
   const handoff = code ? await claimHandoff(code) : null;
   // Only link a handoff that belongs to THIS project (defense in depth).
   const handoffId = handoff && handoff.project_id === projectId ? handoff.id : null;
 
-  const convo = await getOrCreateWaConversation(projectId, fromWaId, handoffId, detectLang(text));
-  await appendWaMessage(convo.id, "inbound", "customer", maskPii(text));
+  // Link a just-created handoff after the replay gate. The conversation
+  // upsert remains atomic; a duplicate delivery has already returned above.
+  if (handoffId) {
+    await getOrCreateWaConversation(projectId, fromWaId, handoffId, detectLang(text));
+  }
 
   if (convo.takeover === "true") return; // human is driving — no auto-reply
 
@@ -97,6 +115,8 @@ export async function handleInbound(
     "agent",
     maskPii(answer.reply),
     sent ? "sent" : "failed",
+    undefined,
+    providerMessageId ? `wa-reply:${providerMessageId}` : undefined,
   );
 }
 

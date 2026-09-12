@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "matrixVersion": "operations-faults-v1",
+  "scope": "synthetic or dedicated non-production environments only",
+  "cases": [
+    {
+      "id": "ingest-202-response-lost",
+      "fault": "client loses the HTTP 202 response after durable acceptance",
+      "expected": "retry reuses eventId; inbox unique identity prevents a second accepted row",
+      "verification": "reconcile telemetry_inbox and ClickHouse by project_id,event_id"
+    },
+    {
+      "id": "worker-crash-after-clickhouse-insert",
+      "fault": "terminate worker after ClickHouse insert and before PostgreSQL completion",
+      "expected": "transactional state rolls back; retry completes; read-time FINAL hides physical duplicate",
+      "verification": "integration regression plus reconciliation physical-duplicate count"
+    },
+    {
+      "id": "postgres-unavailable",
+      "fault": "stop or isolate PostgreSQL during acceptance/worker processing",
+      "expected": "no false durability claim; client retains/retries; worker reports dependency error",
+      "verification": "metrics, logs, pending age, and recovery drain"
+    },
+    {
+      "id": "clickhouse-unavailable",
+      "fault": "make ClickHouse write fail after inbox acceptance",
+      "expected": "detector state and completion do not commit; bounded retry/dead-letter behavior applies",
+      "verification": "integration regression, dead-letter metadata, and recovery drain"
+    },
+    {
+      "id": "redis-unavailable",
+      "fault": "make Redis unavailable for live publish/state",
+      "expected": "durable acceptance remains independent where configured; best-effort features degrade visibly",
+      "verification": "health gauges, metrics, and durable ledger"
+    },
+    {
+      "id": "reordered-events",
+      "fault": "deliver a batch in a different order than event time",
+      "expected": "detectors sort by event time and deterministic event identity",
+      "verification": "detector tests and adversarial fuzz artifact"
+    },
+    {
+      "id": "late-event",
+      "fault": "deliver an event older than the processed visitor watermark",
+      "expected": "retain for analytics without retroactive detection/state mutation",
+      "verification": "late-event integration test and inbox/ClickHouse reconciliation"
+    },
+    {
+      "id": "explicit-event-id-conflict",
+      "fault": "reuse an explicit eventId with a changed payload",
+      "expected": "HTTP 409 and no accepted row for the conflicting payload",
+      "verification": "normalize/server unit test"
+    },
+    {
+      "id": "whatsapp-webhook-replay",
+      "fault": "deliver the same provider message ID more than once",
+      "expected": "one inbound row and at most one local reply attempt",
+      "verification": "provider ID unique index and simulator messageId injection"
+    },
+    {
+      "id": "tenant-and-privacy-boundary",
+      "fault": "cross-project query or payload contains secret/PII-shaped values",
+      "expected": "query remains tenant-scoped; persisted props are masked before storage",
+      "verification": "tenant isolation and masking regression tests"
+    }
+  ]
+}

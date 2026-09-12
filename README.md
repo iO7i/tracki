@@ -54,6 +54,18 @@ pnpm test
 
 The proof surface includes stable event IDs, ingestion-time masking, durable acceptance, retry behavior, detector state, mobile protocol conformance, and an integration path that injects a delivery failure before a real API retry. The repository does not claim lossless client telemetry or causal attribution; those boundaries are documented below.
 
+Operational evidence is generated separately from the deterministic regression
+suite. See [Operations and evidence](docs/OPERATIONS.md) for synthetic ramp,
+friction holdout, adversarial-fuzz, reconciliation, SLO, and runbook commands.
+
+| Evidence area | Current boundary |
+| --- | --- |
+| Native SDKs | React Native is locally verified; Flutter, Swift, and Android consumer builds run in the heavy native workflow |
+| Operational scale | Harness and aggregate metrics are present; a keyed saturation measurement is not run in this checkout |
+| Fault recovery | Durable-ingestion regressions and a fault matrix are present; real dependency-failure evidence needs the local/CI stack |
+| Detector quality | Versioned synthetic holdout with hard negatives and Arabic/English pairs |
+| Deployment | `LIVE_DEPLOYMENT_NOT_RUN`; deployment and canary procedures are documented |
+
 ## Run locally
 
 Requirements: Node.js 20 or later, pnpm 9, and Docker with Compose.
@@ -82,11 +94,16 @@ pnpm test
 pnpm build
 ```
 
-CI also runs the infrastructure regression suite against PostgreSQL, Redis, and ClickHouse service containers, followed by Chromium Playwright tests against the built dashboard and ingestion API. Run the infrastructure suite with `pnpm --filter @tracki/ingest exec vitest run --config vitest.integration.config.ts` against a dedicated test database. It creates telemetry fixtures and deliberately terminates a worker database connection. Playwright runs with `pnpm e2e` against the running stack; it includes an injected delivery failure followed by a real API retry. Exploratory checks under `apps/ingest/bench` are separate from the regression suite.
+CI also runs the infrastructure regression suite against PostgreSQL, Redis, and ClickHouse service containers, followed by Chromium Playwright tests against the built dashboard and ingestion API. The native workflow runs the Flutter, Swift, Kotlin/Android consumer, and React Native reference checks on their supported toolchains. Run the infrastructure suite with `pnpm --filter @tracki/ingest exec vitest run --config vitest.integration.config.ts` against a dedicated test database. It creates telemetry fixtures and deliberately terminates a worker database connection. Playwright runs with `pnpm e2e` against the running stack; it includes an injected delivery failure followed by a real API retry. Exploratory checks under `apps/ingest/bench` and `bench/operations` are separate from the regression suite.
 
 ## Scope and limitations
 
-Tracki is a portfolio implementation with web and mobile functionality. Flutter, Swift, and Kotlin SDK sources include protocol fixtures but have not been compile-verified with native toolchains; see their individual READMEs. Revenue figures depend on configured order values and conversion events and represent estimates or observed correlations. Citation and escalation controls reduce unsupported answers but do not establish a universal accuracy guarantee.
+Tracki is a portfolio implementation with web and mobile functionality. Flutter, Swift, and Kotlin SDKs have native consumer-build jobs in `.github/workflows/native.yml`; a green CI run is required evidence, while this Windows checkout has not run those toolchains locally. Revenue figures depend on configured order values and conversion events and represent estimates or observed correlations. Citation and escalation controls reduce unsupported answers but do not establish a universal accuracy guarantee.
+
+`LIVE_DEPLOYMENT_NOT_RUN`: no production host, secrets, cloud spend, or real
+WhatsApp traffic was authorized for this checkout. Deployment artifacts and a
+synthetic canary procedure are documented, but they are not live-environment
+evidence.
 
 Tenant-scoped access and ingestion-time masking are part of the implementation. Deployment requires appropriate credentials, infrastructure configuration, and validation for the intended environment.
 
@@ -96,6 +113,8 @@ Telemetry delivery uses stable client event IDs and a durable acceptance ledger.
 
 - [Deployment](docs/DEPLOY.md)
 - [Reliability and operations](docs/RELIABILITY.md)
+- [Operations and evidence](docs/OPERATIONS.md)
+- [Claim → evidence matrix](docs/CLAIMS.md)
 - [Mobile wire protocol](docs/mobile-wire-protocol.md)
 - [Mobile SDK overview](sdks/README.md)
 - [React Native SDK](packages/sdk-react-native/README.md)
