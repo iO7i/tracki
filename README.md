@@ -2,7 +2,7 @@
 
 Behavioral intelligence for websites and mobile applications.
 
-Created by **Hosam Talbi**.
+Created by **Hosam**.
 
 Tracki was developed privately from June–July 2026 and published as a cleaned public snapshot in September 2026.
 
