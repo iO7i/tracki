@@ -7,7 +7,13 @@ export type { ProjectRef };
 let sql: postgres.Sql | null = null;
 
 export function pg(): postgres.Sql {
-  if (!sql) sql = postgres(config.databaseUrl);
+  if (!sql)
+    sql = postgres(
+      config.databaseUrl,
+      process.env.CCO_LOCAL_DIAGNOSTIC === "true" && process.env.NODE_ENV !== "production"
+        ? { max: 1 }
+        : {},
+    );
   return sql;
 }
 

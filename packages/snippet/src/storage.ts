@@ -74,7 +74,9 @@ export function getSessionId(now = Date.now()): string {
   return id;
 }
 
-/** Test-only reset. */
-export function __reset(): void {
+/** Rotate analytics context on logout/account switch. Queued entries retain original scope. */
+export function resetIdentity(): void {
   for (const k of [ANON_KEY, USER_KEY, SESSION_KEY, SESSION_TS_KEY]) store.remove(k);
 }
+/** Test-only alias. */
+export const __reset = resetIdentity;

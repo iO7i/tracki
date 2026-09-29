@@ -19,7 +19,7 @@ index 07f6716702ac888215c86ad6e0071aaf55ae519c..47da276cd12c091e3097d27ef22fca4c
        return reconnect()
  
 -    !hadError && (query || sent.length) && error(Errors.connection('CONNECTION_CLOSED', options, socket))
-+    (query || sent.length) && error(Errors.connection('CONNECTION_CLOSED', options, socket))
++    ;(query || sent.length) && error(Errors.connection('CONNECTION_CLOSED', options, socket))
 +    query = results = errorResponse = null
 +    result = new Result()
 +    rows = 0
@@ -81,7 +81,7 @@ index 1b1cccde43b4570d5d071d6ffaab2669b3c2065a..cda94cfe80d02a557afc564580c758bd
        return reconnect()
  
 -    !hadError && (query || sent.length) && error(Errors.connection('CONNECTION_CLOSED', options, socket))
-+    (query || sent.length) && error(Errors.connection('CONNECTION_CLOSED', options, socket))
++    ;(query || sent.length) && error(Errors.connection('CONNECTION_CLOSED', options, socket))
 +    query = results = errorResponse = null
 +    result = new Result()
 +    rows = 0

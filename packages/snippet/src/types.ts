@@ -14,6 +14,7 @@ export type EventType =
 
 export interface EventInput {
   eventId?: string;
+  traceContext?: import("@tracki/shared/trace").TraceContext;
   type: EventType;
   ts: number;
   path?: string;
