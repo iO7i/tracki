@@ -11,6 +11,11 @@ export type TrustedBrowserScope = {
   installationId: string | null;
   generation: number | null;
 };
+const structuralTags = new Set(
+  "a button input select textarea form div span label option section article header footer main nav ul ol li td th tr table img video audio canvas summary details p h1 h2 h3 h4 h5 h6 svg path body html".split(
+    " ",
+  ),
+);
 const types = new Set([
   "pageview",
   "route_change",
@@ -27,7 +32,7 @@ export function parseTrustedBrowser(
   value: unknown,
   project: Project,
   now = Date.now(),
-): { batch: EventBatch; scope: TrustedBrowserScope } {
+): { batch: EventBatch; scope: TrustedBrowserScope; authorizedAt: number } {
   const body = object(value);
   const binding = object(body.binding);
   const raw = object(body.batch);
@@ -71,7 +76,7 @@ export function parseTrustedBrowser(
         throw new CcoError("invalid_browser_track_name");
       props.name = p.name;
     }
-    if (typeof p.tag === "string" && /^[a-z]{1,20}$/.test(p.tag)) props.tag = p.tag;
+    if (typeof p.tag === "string" && structuralTags.has(p.tag)) props.tag = p.tag;
     if (
       typeof p.statusCode === "number" &&
       Number.isInteger(p.statusCode) &&
@@ -85,7 +90,7 @@ export function parseTrustedBrowser(
     event.url = undefined;
     event.referrer = undefined;
   }
-  return { batch, scope };
+  return { batch, scope, authorizedAt };
 }
 export async function acceptTrustedBrowser(
   value: unknown,
@@ -97,7 +102,13 @@ export async function acceptTrustedBrowser(
 ) {
   const now = Date.now();
   const parsed = parseTrustedBrowser(value, project, now);
-  const normalized = normalizeBatch(parsed.batch, project, "cco-first-party", now);
+  const normalized = normalizeBatch(
+    parsed.batch,
+    project,
+    "cco-first-party",
+    now,
+    parsed.authorizedAt,
+  );
   await accept(normalized, parsed.scope);
   return { acceptedClientIds: parsed.batch.events.map((e) => e.eventId) };
 }

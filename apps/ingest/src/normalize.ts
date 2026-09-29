@@ -61,13 +61,14 @@ export function normalizeBatch(
   ref: ProjectRef,
   ua: string,
   receivedAt: number,
+  clockAnchor = receivedAt,
 ): StoredEvent[] {
   const maxAge = 24 * 60 * 60 * 1000;
   const skew = 120_000;
   if (!Number.isSafeInteger(batch.sentAt) || batch.sentAt > receivedAt + skew) {
     throw new Error("invalid event time");
   }
-  const correction = Math.max(0, batch.sentAt - receivedAt);
+  const correction = Math.max(0, batch.sentAt - clockAnchor);
   for (const e of batch.events) {
     if (
       !Number.isSafeInteger(e.ts) ||

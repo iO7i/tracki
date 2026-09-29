@@ -76,3 +76,42 @@ it("binding accepts valid legacy correlation IDs without accepting non-string va
   for (const anonId of [undefined, null, 123, {}, []])
     expect(() => parseBinding({ ...binding, anonId }, scope, now)).toThrow();
 });
+
+it("server authorization anchors future browser clock correction across retries", async () => {
+  const { parseTrustedBrowser } = await import("./trusted-browser");
+  const now = Date.now();
+  const raw = input();
+  raw.sentAt = now + 30_000;
+  for (const event of raw.events) event.ts = raw.sentAt;
+  const command = {
+    authorizedAt: now,
+    binding: {
+      actorKind: "human",
+      accountId: "account",
+      installationId: "install",
+      generation: 1,
+      anonId: raw.anonId,
+      sessionId: raw.sessionId,
+      validFrom: now - 1000,
+      expiresAt: now + 60_000,
+    },
+    batch: {
+      ...raw,
+      events: raw.events.map((e) => ({
+        ...e,
+        path: "/customers/customername?token=secret",
+        props: { name: "cco_request", tag: "customername" },
+      })),
+    },
+  };
+  const first = parseTrustedBrowser(command, scope, now);
+  const retry = parseTrustedBrowser(command, scope, now + 1000);
+  const a = normalizeBatch(first.batch, scope, "", now, first.authorizedAt)[0];
+  const b = normalizeBatch(retry.batch, scope, "", now + 1000, retry.authorizedAt)[0];
+  if (!a || !b) throw new Error("missing normalized fixture");
+  expect(a.ts).toBe(now);
+  expect(b.ts).toBe(a.ts);
+  expect(b.event_id).toBe(a.event_id);
+  expect(a.path).toBe("/customers/:id");
+  expect(JSON.parse(a.props).tag).toBeUndefined();
+});
