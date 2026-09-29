@@ -39,7 +39,12 @@ function isSensitive(el: Element): boolean {
  * Wire up auto-capture. Returns a teardown fn (used by tests). Pageviews on SPA
  * navigation are caught by patching History + popstate.
  */
-export function installCapture(queue: EventQueue): () => void {
+export function installCapture(
+  queue: EventQueue,
+  options: { structural?: boolean } = {},
+): () => void {
+  const describeElement = (el: Element) =>
+    options.structural ? { tag: el.tagName.toLowerCase() } : describe(el);
   const teardowns: Array<() => void> = [];
   const on = <K extends keyof DocumentEventMap>(
     target: Document | Window,
@@ -56,7 +61,7 @@ export function installCapture(queue: EventQueue): () => void {
   let pendingForm: Element | null = null;
   const flushAbandon = () => {
     if (pendingForm) {
-      emit(queue, "form_abandon", describe(pendingForm));
+      emit(queue, "form_abandon", describeElement(pendingForm));
       pendingForm = null;
     }
   };
@@ -100,7 +105,7 @@ export function installCapture(queue: EventQueue): () => void {
       if (!target || isSensitive(target)) return;
       const el = (target.closest("a,button,[role=button],input,select") as Element) ?? target;
       if (isSensitive(el)) return;
-      emit(queue, "click", describe(el));
+      emit(queue, "click", describeElement(el));
     },
     { capture: true, passive: true },
   );
@@ -113,7 +118,7 @@ export function installCapture(queue: EventQueue): () => void {
       const el = (e as FocusEvent).target as Element | null;
       if (el && /^(input|textarea|select)$/i.test(el.tagName) && !isSensitive(el)) {
         pendingForm = (el as HTMLInputElement).form ?? el.closest("form") ?? el;
-        emit(queue, "form_focus", describe(el));
+        emit(queue, "form_focus", describeElement(el));
       }
     },
     { capture: true },
@@ -125,7 +130,7 @@ export function installCapture(queue: EventQueue): () => void {
       const form = (e as SubmitEvent).target as Element | null;
       // A submit completes the interaction — no abandonment.
       pendingForm = null;
-      if (form) emit(queue, "form_submit", describe(form));
+      if (form) emit(queue, "form_submit", describeElement(form));
     },
     { capture: true },
   );
@@ -133,11 +138,23 @@ export function installCapture(queue: EventQueue): () => void {
   // Errors.
   on(window, "error", (e) => {
     const ev = e as ErrorEvent;
-    emit(queue, "error", { message: String(ev.message ?? "").slice(0, 200) });
+    emit(
+      queue,
+      "error",
+      options.structural
+        ? { code: "CLIENT_ERROR" }
+        : { message: String(ev.message ?? "").slice(0, 200) },
+    );
   });
   on(window, "unhandledrejection", (e) => {
     const reason = (e as PromiseRejectionEvent).reason;
-    emit(queue, "error", { message: String(reason ?? "rejection").slice(0, 200) });
+    emit(
+      queue,
+      "error",
+      options.structural
+        ? { code: "CLIENT_ERROR" }
+        : { message: String(reason ?? "rejection").slice(0, 200) },
+    );
   });
 
   // Page leave + final flush.

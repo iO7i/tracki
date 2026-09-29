@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { EventBatch, ProjectRef, StoredEvent } from "@tracki/shared";
 import { sanitizeVertexTrack } from "@tracki/shared";
+import { sanitizeTraceContext } from "@tracki/shared/trace";
 import { scrubSerialized, scrubString, scrubValue } from "./scrub.js";
 
 /**
@@ -52,7 +53,7 @@ export function coarsenUA(ua: string): string {
 
 /**
  * Turn a validated batch into PII-scrubbed StoredEvents ready for ClickHouse.
- * Every string field is masked here — raw PII must never reach storage. The
+ * Every string field is masked here â€” raw PII must never reach storage. The
  * serialized props get a second `scrubSerialized` backstop (Audit N1).
  */
 export function normalizeBatch(
@@ -77,7 +78,7 @@ export function normalizeBatch(
       throw new Error("invalid event time");
   }
   const occurrences = new Map<string, number>();
-  // implementation: mobile SDKs send a device block; absent ⇒ a browser batch. The
+  // implementation: mobile SDKs send a device block; absent â‡’ a browser batch. The
   // mobile "ua" is a coarse platform/os pair built server-side from the schema-
   // bounded device fields (never the raw UA header for app traffic).
   const device = batch.device;
@@ -88,7 +89,13 @@ export function normalizeBatch(
   const appVersion = device?.appVersion ?? "";
   const deviceModel = device?.model ?? "";
   return batch.events.map((e) => {
-    const props = normalizeProps(e.type, e.props);
+    const generic = normalizeProps(e.type, e.props);
+    const props: Record<string, unknown> = generic
+      ? JSON.parse(scrubSerialized(JSON.stringify(generic)))
+      : {};
+    props.ccoTrace = undefined;
+    const correlation = sanitizeTraceContext(e.traceContext);
+    if (correlation) props.ccoTrace = correlation;
     const fingerprint = canonical({ anon: batch.anonId, session: batch.sessionId, event: e });
     const ordinal = occurrences.get(fingerprint) ?? 0;
     occurrences.set(fingerprint, ordinal + 1);
@@ -107,7 +114,7 @@ export function normalizeBatch(
       path: scrubString(e.path),
       url: scrubString(e.url),
       referrer: scrubString(e.referrer),
-      props: props ? scrubSerialized(JSON.stringify(props)) : "{}",
+      props: JSON.stringify(props),
       ua: scrubString(coarseUa),
       platform,
       app_version: scrubString(appVersion),

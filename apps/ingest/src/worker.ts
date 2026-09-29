@@ -2,6 +2,9 @@ import { createClickHouse, insertEvents, insertStruggles } from "@tracki/clickho
 import type { StoredEvent, StruggleDetection } from "@tracki/shared";
 import type postgres from "postgres";
 import { computeAssist } from "./assist";
+import { configuration as ccoConfiguration } from "./cco/config";
+import { projectDetection } from "./cco/projection";
+import { appendCco } from "./cco/store";
 import { REDIS_KEYS } from "./config";
 import { detectBatch } from "./detector";
 import { DurableStateStore } from "./durable-state";
@@ -53,6 +56,13 @@ export async function processOne(sql: postgres.Sql, io: WorkerIO): Promise<boole
       await state.write(watermarkKey, Math.max(watermark, e.ts));
       await io.events([e]);
       await io.struggles(detections);
+      const cco = ccoConfiguration();
+      const scope = cco?.projects.find((p) => p.orgId === e.org_id && p.projectId === e.project_id);
+      if (scope)
+        await appendCco(
+          tx,
+          detections.map((d) => projectDetection(d, e, scope)),
+        );
       await io.beforeAck?.(tx);
       await tx`UPDATE telemetry_inbox SET completed_at=now(),payload=NULL WHERE project_id=${e.project_id} AND event_id=${e.event_id}`;
       return true;

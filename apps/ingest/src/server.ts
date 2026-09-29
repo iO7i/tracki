@@ -13,6 +13,9 @@ import { simulateAllowed, verifySignature } from "@tracki/whatsapp";
 import Fastify, { type FastifyInstance } from "fastify";
 import { getManifest } from "./actions.js";
 import { popAssist } from "./assist.js";
+import { configuration as ccoConfiguration } from "./cco/config";
+import { registerCcoRoutes } from "./cco/routes";
+import { PostgresCcoStore } from "./cco/store";
 import { handleChat } from "./chat.js";
 import { REDIS_KEYS } from "./config.js";
 import { acceptEvents } from "./inbox";
@@ -277,5 +280,7 @@ export function buildServer(): FastifyInstance {
     return reply.code(202).send(assist ? { ok: true, assist } : { ok: true });
   });
 
+  const cco = ccoConfiguration();
+  if (cco) registerCcoRoutes(app, new PostgresCcoStore(pg()), cco);
   return app;
 }

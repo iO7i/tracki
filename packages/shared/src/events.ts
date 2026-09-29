@@ -122,6 +122,16 @@ export const eventInputSchema = z.object({
     .string()
     .regex(/^[A-Za-z0-9_-]{1,128}$/)
     .optional(),
+  traceContext: z
+    .object({
+      traceId: z.string().regex(/^(?!0+$)[a-f0-9]{32}$/),
+      spanId: z.string().regex(/^(?!0+$)[a-f0-9]{16}$/),
+      parentSpanId: z
+        .string()
+        .regex(/^(?!0+$)[a-f0-9]{16}$/)
+        .optional(),
+    })
+    .optional(),
   type: z.enum(EVENT_TYPES),
   // Client timestamp (ms since epoch). Server also stamps received_at.
   ts: z.number().int().positive(),

@@ -1,9 +1,30 @@
 import type { StoredEvent } from "@tracki/shared";
 import type postgres from "postgres";
+import { configuration } from "./cco/config";
+import { CcoError, digest } from "./cco/contract";
+import { projectBehavior } from "./cco/projection";
+import { appendCco, ensureCco } from "./cco/store";
+import type { TrustedBrowserScope } from "./cco/trusted-browser";
 import { pg } from "./pg";
+
+function inboxPayloadDigest(value: unknown): string | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  // This timestamp is assigned by Tracki when it accepts a delivery. A retry
+  // has a new receipt time, but must retain the same observed event payload.
+  const stable = Object.fromEntries(Object.entries(value).filter(([key]) => key !== "received_at"));
+  return digest(stable);
+}
+
+export function assertInboxRetryMatches(storedPayload: unknown, incoming: StoredEvent): void {
+  const storedDigest = inboxPayloadDigest(storedPayload);
+  const incomingDigest = inboxPayloadDigest(incoming);
+  if (!storedDigest || storedDigest !== incomingDigest)
+    throw new CcoError("telemetry_event_identity_conflict", 409);
+}
 
 /** Durable ledger: completed identities are retained; project erasure requires operator cleanup. */
 export async function ensureInbox(sql: postgres.Sql = pg()): Promise<void> {
+  if (configuration()) await ensureCco(sql);
   await sql`CREATE TABLE IF NOT EXISTS telemetry_inbox (
     project_id text NOT NULL, event_id text NOT NULL, org_id text NOT NULL,
     event_time bigint NOT NULL, payload jsonb, completed_at timestamptz,
@@ -22,6 +43,7 @@ export async function ensureInbox(sql: postgres.Sql = pg()): Promise<void> {
 export async function acceptEvents(
   events: StoredEvent[],
   sql: postgres.Sql = pg(),
+  trustedBrowser?: TrustedBrowserScope,
 ): Promise<StoredEvent[]> {
   return sql.begin(async (tx) => {
     const accepted: StoredEvent[] = [];
@@ -32,6 +54,34 @@ export async function acceptEvents(
         VALUES (${e.project_id},${e.event_id},${e.org_id},${e.ts},${tx.json(e as unknown as postgres.JSONValue)})
         ON CONFLICT (project_id,event_id) DO NOTHING RETURNING event_id`;
       if (rows.length) accepted.push(e);
+      else {
+        const existing = await tx`SELECT payload FROM telemetry_inbox
+          WHERE project_id=${e.project_id} AND event_id=${e.event_id} FOR UPDATE`;
+        assertInboxRetryMatches(existing[0]?.payload, e);
+      }
+    }
+    const cco = configuration();
+    if (cco) {
+      const projected = accepted.flatMap((e) => {
+        const scope = cco.projects.find(
+          (p) => p.orgId === e.org_id && p.projectId === e.project_id,
+        );
+        if (!scope) return [];
+        const projection = projectBehavior(e, scope);
+        if (trustedBrowser) {
+          if (trustedBrowser.orgId !== scope.orgId || trustedBrowser.projectId !== scope.projectId)
+            throw new Error("trusted_browser_scope_mismatch");
+          Object.assign(projection, {
+            accountId: trustedBrowser.accountId,
+            installationId: trustedBrowser.installationId,
+            generation: trustedBrowser.generation,
+            actorKind: "human",
+            targetAppKey: scope.appKey,
+          });
+        }
+        return [projection];
+      });
+      await appendCco(tx, projected);
     }
     return accepted;
   }) as Promise<StoredEvent[]>;

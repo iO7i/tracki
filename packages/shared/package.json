@@ -11,7 +11,8 @@
     "./faq": "./src/faq.ts",
     "./text": "./src/text.ts",
     "./pii": "./src/pii.ts",
-    "./rage": "./src/rage.ts"
+    "./rage": "./src/rage.ts",
+    "./trace": "./src/trace.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",

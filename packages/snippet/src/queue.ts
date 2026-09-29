@@ -1,4 +1,5 @@
 import { scrubProperties, scrubText } from "@tracki/shared/pii";
+import { sanitizeTraceContext } from "@tracki/shared/trace";
 import { randomId } from "./ids";
 import { getAnonId, getSessionId, getUserId } from "./storage";
 import { send } from "./transport";
@@ -108,6 +109,7 @@ export class EventQueue {
     if (this.consent === "denied") return;
     const event: EventInput = {
       ...input,
+      traceContext: sanitizeTraceContext(input.traceContext),
       eventId: input.eventId ?? randomId("evt"),
       path: input.path ? scrubText(input.path) : undefined,
       url: input.url ? scrubText(input.url) : undefined,

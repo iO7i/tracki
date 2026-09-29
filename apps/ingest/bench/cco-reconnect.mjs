@@ -1,0 +1,15 @@
+import {createServer} from 'node:net';
+import assert from 'node:assert/strict';
+import postgres from 'postgres';
+let connections=0;
+const server=createServer(socket=>{connections++;socket.destroy();});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const address=server.address();
+const sql=postgres(`postgres://probe:probe@127.0.0.1:${address.port}/probe`,{max:1,connect_timeout:1,backoff:()=>0.01,max_lifetime:60});
+const pending=sql`SELECT 1`.catch(()=>undefined);
+await new Promise(resolve=>setTimeout(resolve,400));
+await sql.end({timeout:0.1});
+await pending;
+await new Promise(resolve=>server.close(resolve));
+assert.ok(connections>0,'Probe must actually drop at least one connection');
+console.log(JSON.stringify({passed:true,connections,scope:'initial TCP disconnect does not crash patched client'}));

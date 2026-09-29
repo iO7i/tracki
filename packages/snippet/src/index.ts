@@ -5,7 +5,8 @@ import { createChatWidget } from "./chat";
 import { createWhatsAppOpener } from "./cta";
 import { createFaqWidget } from "./faq";
 import { EventQueue } from "./queue";
-import { getAnonId, getSessionId, setUserId } from "./storage";
+import { getAnonId, getSessionId, resetIdentity, setUserId } from "./storage";
+import { tracedFetch } from "./tracing";
 import type { EventInput } from "./types";
 
 type QueuedCall = unknown[];
@@ -16,6 +17,9 @@ interface TrackiStub {
 }
 
 interface TrackiApi {
+  context(): { anonId: string; sessionId: string };
+  reset(): void;
+  tracedFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
   track(name: string, props?: Record<string, unknown>): void;
   identify(userId: string, traits?: Record<string, unknown>): void;
   page(props?: Record<string, unknown>): void;
@@ -78,6 +82,7 @@ function boot(): void {
   const config = resolveConfig();
   if (!config) return;
 
+  let consentGranted = config.consent === "granted";
   const queue = new EventQueue(config.key, config.endpoint);
   // Gate BEFORE any producer runs so the first auto-captured pageview respects consent.
   queue.setInitialConsent(config.consent);
@@ -115,6 +120,16 @@ function boot(): void {
   const enqueue = (e: Omit<EventInput, "ts">) => queue.enqueue({ ts: Date.now(), ...e });
 
   const api: TrackiApi = {
+    context() {
+      return { anonId: getAnonId(), sessionId: getSessionId() };
+    },
+    reset() {
+      queue.flush(false);
+      resetIdentity();
+    },
+    tracedFetch(input, init) {
+      return tracedFetch(queue, input, init, consentGranted);
+    },
     track(name, props) {
       enqueue({ type: "track", ...ctx(), props: { ...props, name } });
       actions.onTrack(name);
@@ -131,6 +146,7 @@ function boot(): void {
       enqueue({ type: "pageview", ...ctx(), props });
     },
     consent(granted) {
+      consentGranted = !!granted;
       queue.setConsent(!!granted);
     },
     faq() {
