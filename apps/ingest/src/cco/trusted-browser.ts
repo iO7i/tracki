@@ -102,12 +102,13 @@ export async function acceptTrustedBrowser(
 ) {
   const now = Date.now();
   const parsed = parseTrustedBrowser(value, project, now);
+  // Preserve browser-reported timestamps: retry authorization time is not event time.
   const normalized = normalizeBatch(
     parsed.batch,
     project,
     "cco-first-party",
     now,
-    parsed.authorizedAt,
+    parsed.batch.sentAt,
   );
   await accept(normalized, parsed.scope);
   return { acceptedClientIds: parsed.batch.events.map((e) => e.eventId) };

@@ -64,18 +64,18 @@ describe("trusted browser inbox identity", () => {
         expiresAt: now + 60_000,
       };
       const batch = (statusCode: number) => ({
-        authorizedAt: now,
+        authorizedAt: Date.now(),
         binding,
         batch: {
           key: "pk_test",
           anonId: eventId,
           sessionId: eventId,
-          sentAt: now,
+          sentAt: now + 30_000,
           events: [
             {
               eventId,
               type: "track",
-              ts: now,
+              ts: now + 30_000,
               path: "/account/plan",
               traceContext: { traceId, spanId },
               props: { name: "cco_request", statusCode },
@@ -89,12 +89,14 @@ describe("trusted browser inbox identity", () => {
         );
 
       await expect(receive(200)).resolves.toEqual({ acceptedClientIds: [eventId] });
+      vi.spyOn(Date, "now").mockReturnValue(now + 1000);
       await expect(receive(200)).resolves.toEqual({ acceptedClientIds: [eventId] });
       await expect(receive(500)).rejects.toMatchObject({
         code: "telemetry_event_identity_conflict",
         status: 409,
       });
     } finally {
+      vi.restoreAllMocks();
       vi.unstubAllEnvs();
     }
   });
@@ -151,18 +153,18 @@ describe("trusted browser inbox identity", () => {
           expiresAt: now + 60_000,
         };
         const body = (statusCode: number) => ({
-          authorizedAt: now,
+          authorizedAt: Date.now(),
           binding,
           batch: {
             key: "pk_test",
             anonId: eventId,
             sessionId: eventId,
-            sentAt: now,
+            sentAt: now + 30_000,
             events: [
               {
                 eventId,
                 type: "track",
-                ts: now,
+                ts: now + 30_000,
                 path: "/account/plan",
                 traceContext: { traceId, spanId: "d".repeat(16) },
                 props: { name: "cco_request", statusCode },
@@ -191,6 +193,7 @@ describe("trusted browser inbox identity", () => {
         if (storedEventId)
           await sql`DELETE FROM telemetry_inbox WHERE project_id='project' AND event_id=${storedEventId}`;
         await sql.end();
+        vi.restoreAllMocks();
         vi.unstubAllEnvs();
       }
     },
