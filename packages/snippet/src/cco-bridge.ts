@@ -2,6 +2,7 @@ import { installCapture } from "./capture";
 import { EventQueue } from "./queue";
 import { getAnonId, getSessionId, resetIdentity } from "./storage";
 import type { Batch, EventInput } from "./types";
+import { installVisualCapture } from "./visual";
 // The host's authenticated API authorizes every batch; these grants are never login credentials.
 type Grant = { token: string; scopeTag: string; expiresAt: number };
 const script = document.currentScript as HTMLScriptElement | null;
@@ -16,6 +17,7 @@ let epoch = 0;
 let busy = false;
 let queue: EventQueue | undefined;
 let teardown: (() => void) | undefined;
+let stopVisual: (() => void) | undefined;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let authorityTag: string | null = null;
 let grant: Grant | null = null;
@@ -175,6 +177,8 @@ async function send(_endpoint: string, batch: Batch, beacon: boolean): Promise<b
   }
 }
 function clearRuntime(): void {
+  stopVisual?.();
+  stopVisual = undefined;
   if (timer) clearTimeout(timer);
   timer = undefined;
   teardown?.();
@@ -231,6 +235,11 @@ async function refresh(): Promise<void> {
       teardown = installCapture(
         { enqueue: emit, flush: (beacon: boolean) => queue?.flush(beacon) } as EventQueue,
         { structural: true },
+      );
+      stopVisual = installVisualCapture(
+        (batch) => send(endpoint, batch, false),
+        () => ({ anonId: getAnonId(), sessionId: getSessionId() }),
+        path,
       );
     }
   } catch {

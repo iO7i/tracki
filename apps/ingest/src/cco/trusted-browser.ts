@@ -4,6 +4,7 @@ import { normalizeBatch } from "../normalize";
 import { pg } from "../pg";
 import type { Project } from "./config";
 import { CcoError, correlationId, id, integer, object, safeRoute } from "./contract";
+import { storeVisual, visualProps } from "./recordings";
 export type TrustedBrowserScope = {
   orgId: string;
   projectId: string;
@@ -72,9 +73,14 @@ export function parseTrustedBrowser(
     const p = event.props ?? {};
     const props: Record<string, unknown> = {};
     if (event.type === "track") {
-      if (!["cco_request", "cco_response", "cco_network_failure"].includes(String(p.name)))
+      if (
+        !["cco_request", "cco_response", "cco_network_failure", "cco_visual_chunk"].includes(
+          String(p.name),
+        )
+      )
         throw new CcoError("invalid_browser_track_name");
       props.name = p.name;
+      if (p.name === "cco_visual_chunk") Object.assign(props, visualProps(p));
     }
     if (typeof p.tag === "string" && structuralTags.has(p.tag)) props.tag = p.tag;
     if (
@@ -102,14 +108,18 @@ export async function acceptTrustedBrowser(
 ) {
   const now = Date.now();
   const parsed = parseTrustedBrowser(value, project, now);
+  const visual = parsed.batch.events.filter((e) => e.props?.name === "cco_visual_chunk");
+  const behavior = parsed.batch.events.filter((e) => e.props?.name !== "cco_visual_chunk");
+  if (visual.length)
+    await storeVisual(pg(), parsed.scope, project, { ...parsed.batch, events: visual });
   // Preserve browser-reported timestamps: retry authorization time is not event time.
   const normalized = normalizeBatch(
-    parsed.batch,
+    { ...parsed.batch, events: behavior },
     project,
     "cco-first-party",
     now,
     parsed.batch.sentAt,
   );
-  await accept(normalized, parsed.scope);
+  if (normalized.length) await accept(normalized, parsed.scope);
   return { acceptedClientIds: parsed.batch.events.map((e) => e.eventId) };
 }

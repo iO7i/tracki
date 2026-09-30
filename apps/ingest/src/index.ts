@@ -1,8 +1,9 @@
 import { assertLLM } from "@tracki/ai";
 import { assertConfig } from "@tracki/whatsapp";
+import { ensureRecordings } from "./cco/recordings";
 import { REDIS_KEYS, config } from "./config.js";
 import { ensureInbox } from "./inbox";
-import { closePg } from "./pg.js";
+import { closePg, pg } from "./pg.js";
 import { closeRedis, redis } from "./redis.js";
 import { buildServer } from "./server.js";
 import { startWorker } from "./worker.js";
@@ -11,6 +12,7 @@ async function main(): Promise<void> {
   assertConfig(); // fail closed on partial Meta config (Audit 07 B1/B2)
   assertLLM(); // fail closed: require a real LLM in prod, not the heuristic (Audit 00-07 X1)
   await ensureInbox();
+  await ensureRecordings(pg());
   // Never silently abandon work from the retired list-based queue during upgrade.
   for (const key of [REDIS_KEYS.buffer, REDIS_KEYS.processing]) {
     if (await redis().llen(key))
