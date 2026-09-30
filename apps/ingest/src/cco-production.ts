@@ -48,7 +48,10 @@ async function main(): Promise<void> {
         mode: "cco-collector",
         storage: "postgresql",
         retentionDays,
-        analyticsWorker: "not-enabled",
+        analyticsWorker:
+          process.env.TRACKI_CCO_ANALYTICS_WORKER === "external"
+            ? "external-configured"
+            : "not-enabled",
         release: process.env.RAILWAY_GIT_COMMIT_SHA ?? "unknown",
       });
     } catch {
