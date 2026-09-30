@@ -1,8 +1,13 @@
 <clickhouse>
+  <logger>
+    <level>warning</level>
+    <console>1</console>
+  </logger>
     <!-- Bound telemetry resource use independently from merchant services. -->
     <max_server_memory_usage>1610612736</max_server_memory_usage>
     <max_thread_pool_size>128</max_thread_pool_size>
-    <background_pool_size>8</background_pool_size>
+  <!-- Keep merge capacity compatible with ClickHouse 24.8's default mutation threshold. -->
+  <background_pool_size>16</background_pool_size>
     <background_schedule_pool_size>8</background_schedule_pool_size>
     <background_buffer_flush_schedule_pool_size>4</background_buffer_flush_schedule_pool_size>
     <background_message_broker_schedule_pool_size>4</background_message_broker_schedule_pool_size>
