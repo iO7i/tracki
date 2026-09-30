@@ -86,7 +86,9 @@ export async function processOne(sql: postgres.Sql, io: WorkerIO): Promise<boole
   }
 }
 
-export function startWorker(): { stop: () => Promise<void> } {
+export function startWorker(options: { liveAssistance?: boolean } = {}): {
+  stop: () => Promise<void>;
+} {
   const ch = createClickHouse();
   let running = true;
   const sql = pg();
@@ -110,7 +112,7 @@ export function startWorker(): { stop: () => Promise<void> } {
         },
       });
       // Optional live delivery is best effort; durable analytics are already committed.
-      if (done)
+      if (done && options.liveAssistance !== false)
         for (const s of detections) {
           try {
             await redis().publish(REDIS_KEYS.struggleChannel(s.project_id), JSON.stringify(s));
