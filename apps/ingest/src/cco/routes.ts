@@ -1,6 +1,8 @@
 import type { FastifyInstance } from "fastify";
+import { pg } from "../pg";
 import { type CcoConfig, constantEqual } from "./config";
 import { CcoError, event, id, integer, object } from "./contract";
+import { readRecordings } from "./recordings";
 import { type CcoStore, parseBinding } from "./store";
 import { acceptTrustedBrowser } from "./trusted-browser";
 export function registerCcoRoutes(app: FastifyInstance, store: CcoStore, config: CcoConfig): void {
@@ -10,6 +12,24 @@ export function registerCcoRoutes(app: FastifyInstance, store: CcoStore, config:
     error instanceof CcoError
       ? { status: error.status, code: error.code }
       : { status: 503, code: "cco_storage_unavailable" };
+  app.get("/internal/cco/recordings", async (req, reply) => {
+    reply.header("cache-control", "no-store");
+    if (!constantEqual(key(req.headers.authorization), config.readKey))
+      return reply.code(403).send({ error: "forbidden" });
+    try {
+      const q = object(req.query);
+      return await readRecordings(
+        pg(),
+        config,
+        id(q.accountId),
+        q.recordingId == null ? undefined : id(q.recordingId),
+        q.projectId == null ? undefined : id(q.projectId),
+      );
+    } catch (error) {
+      const f = failure(error);
+      return reply.code(f.status).send({ error: f.code });
+    }
+  });
   app.post("/internal/cco/browser-batches", async (request, reply) => {
     const scope = config.projects.find((p) =>
       constantEqual(key(request.headers.authorization), p.producerKey),

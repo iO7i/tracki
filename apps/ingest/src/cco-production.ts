@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import { configuration } from "./cco/config";
+import { ensureRecordings } from "./cco/recordings";
 import { registerCcoRoutes } from "./cco/routes";
 import { PostgresCcoStore } from "./cco/store";
 import { ensureInbox } from "./inbox";
@@ -16,6 +17,7 @@ async function main(): Promise<void> {
     throw new Error("invalid_retention_days");
   await ensureInbox();
   const sql = pg();
+  await ensureRecordings(sql);
   const app = Fastify({ logger: false, bodyLimit: 256 * 1024, requestTimeout: 15000 });
   registerCcoRoutes(app, new PostgresCcoStore(sql), config);
   let retentionHealthy = false;
@@ -30,6 +32,7 @@ async function main(): Promise<void> {
         await tx`DELETE FROM cco_bindings WHERE expires_at < ${cutoff}`;
         await tx`DELETE FROM telemetry_inbox WHERE created_at < to_timestamp(${cutoff} / 1000.0)`;
         await tx`DELETE FROM telemetry_state WHERE expires_at < now()`;
+        await tx`DELETE FROM cco_visual_chunks WHERE received_at < ${cutoff}`;
       });
       retentionHealthy = true;
     } catch {
