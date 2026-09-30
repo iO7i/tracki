@@ -25,29 +25,53 @@ async function main(): Promise<void> {
   const ch = createClickHouse();
   const worker = startWorker({ liveAssistance: false });
   const app = Fastify({ logger: false, requestTimeout: 15000 });
-  app.get("/health", async (_request, reply) => {
-    try {
-      const [inbox, ping] = await Promise.all([
-        sql`SELECT count(*) FILTER (WHERE completed_at IS NULL AND dead_at IS NULL)::int AS pending,
+  let reporting = false;
+  let lastProgress = "";
+  const inspect = async () => {
+    const [inbox, stored] = await Promise.all([
+      sql`SELECT count(*) FILTER (WHERE completed_at IS NULL AND dead_at IS NULL)::int AS pending,
           count(*) FILTER (WHERE dead_at IS NOT NULL)::int AS dead_letters,
           count(*) FILTER (WHERE completed_at IS NOT NULL)::int AS completed FROM telemetry_inbox`,
-        ch.ping(),
-      ]);
-      if (!ping.success) throw new Error("analytics_storage_unavailable");
-      return {
-        ok: true,
-        mode: "cco-analytics-worker",
-        release: process.env.CCO_RELEASE_SHA ?? process.env.RAILWAY_GIT_COMMIT_SHA ?? "unknown",
-        ...inbox[0],
-      };
+      ch.query({ query: "SELECT count() AS persisted_events FROM events", format: "JSONEachRow" }),
+    ]);
+    const rows = await stored.json<{ persisted_events: string }>();
+    const progress = { ...inbox[0], persistedEvents: Number(rows[0]?.persisted_events ?? 0) };
+    const signature = JSON.stringify(progress);
+    if (signature !== lastProgress) {
+      console.info(JSON.stringify({ event: "cco_analytics_progress", ...progress }));
+      lastProgress = signature;
+    }
+    return {
+      ...progress,
+      ok: true,
+      mode: "cco-analytics-worker",
+      release: process.env.CCO_RELEASE_SHA ?? process.env.RAILWAY_GIT_COMMIT_SHA ?? "unknown",
+    };
+  };
+  app.get("/health", async (_request, reply) => {
+    try {
+      return await inspect();
     } catch {
       return reply.code(503).send({ ok: false, mode: "cco-analytics-worker" });
     }
   });
+  const timer = setInterval(async () => {
+    if (reporting) return;
+    reporting = true;
+    try {
+      await inspect();
+    } catch {
+      console.error("cco_analytics_inspection_unavailable");
+    } finally {
+      reporting = false;
+    }
+  }, 30000);
+  timer.unref();
   let stopping = false;
   const shutdown = async () => {
     if (stopping) return;
     stopping = true;
+    clearInterval(timer);
     await app.close();
     await worker.stop();
     await ch.close();
