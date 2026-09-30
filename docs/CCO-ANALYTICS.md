@@ -24,6 +24,12 @@ domains or TCP proxies. `/health` reports storage availability and durable inbox
 counts. Verify real accepted inbox records complete and ClickHouse rows persist
 before claiming analytics processing is live.
 
+Build ClickHouse with `Dockerfile.cco-clickhouse` using the same major/minor
+version as the repository integration suite. Mount `/var/lib/clickhouse` on a
+persistent volume. The added configuration bounds server memory and background
+threads; the upstream image entry point still initializes the database and
+authenticated user from its required environment variables.
+
 Set `TRACKI_CCO_ANALYTICS_WORKER=external` on the collector only after the worker
 is verified. Collector health then reports `external-configured`; it does not
 claim to measure the separate worker's liveness. Watchtower's pending and dead

@@ -1,0 +1,2 @@
+FROM clickhouse/clickhouse-server:24.8-alpine
+COPY infra/cco-clickhouse.xml /etc/clickhouse-server/config.d/cco.xml
