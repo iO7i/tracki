@@ -52,7 +52,7 @@ async function main(): Promise<void> {
           process.env.TRACKI_CCO_ANALYTICS_WORKER === "external"
             ? "external-configured"
             : "not-enabled",
-        release: process.env.RAILWAY_GIT_COMMIT_SHA ?? "unknown",
+        release: process.env.CCO_RELEASE_SHA ?? process.env.RAILWAY_GIT_COMMIT_SHA ?? "unknown",
       });
     } catch {
       return reply.code(503).send({ ok: false, mode: "cco-collector", storage: "unavailable" });
