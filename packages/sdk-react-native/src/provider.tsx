@@ -62,6 +62,9 @@ export function TrackiProvider({ options, bindings, children }: TrackiProviderPr
         disposeRef.current = dispose;
         setClient(c);
       },
+      () => {
+        /* Initialization failure leaves the host app usable. */
+      },
     );
     return () => {
       cancelled = true;

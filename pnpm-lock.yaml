@@ -195,14 +195,16 @@ importers:
         version: 5.9.3
 
   packages/mobile-core:
-    dependencies:
+    devDependencies:
       '@tracki/shared':
         specifier: workspace:*
         version: link:../shared
-    devDependencies:
       '@types/node':
         specifier: ^22.10.0
         version: 22.19.19
+      esbuild:
+        specifier: 0.25.12
+        version: 0.25.12
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -212,25 +214,31 @@ importers:
 
   packages/sdk-react-native:
     dependencies:
-      '@react-native-async-storage/async-storage':
-        specifier: '>=1.19.0'
-        version: 3.1.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@18.3.31)(react@19.2.7))(react@19.2.7)
       '@tracki/mobile-core':
-        specifier: workspace:*
+        specifier: 0.1.0
         version: link:../mobile-core
-      react:
-        specifier: '>=18'
-        version: 19.2.7
-      react-native:
-        specifier: '>=0.72'
-        version: 0.85.3(@babel/core@7.29.7)(@types/react@18.3.31)(react@19.2.7)
     devDependencies:
+      '@react-native-async-storage/async-storage':
+        specifier: 3.1.1
+        version: 3.1.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7))(react@19.2.7)
+      '@tracki/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@types/node':
         specifier: ^22.10.0
         version: 22.19.19
       '@types/react':
-        specifier: ^18.3.0
-        version: 18.3.31
+        specifier: 19.2.16
+        version: 19.2.16
+      esbuild:
+        specifier: 0.25.12
+        version: 0.25.12
+      react:
+        specifier: 19.2.7
+        version: 19.2.7
+      react-native:
+        specifier: 0.85.3
+        version: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7)
       typescript:
         specifier: ^5.7.3
         version: 5.9.3
@@ -1875,16 +1883,10 @@ packages:
   '@types/node@22.19.19':
     resolution: {integrity: sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew==}
 
-  '@types/prop-types@15.7.15':
-    resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
-
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
     peerDependencies:
       '@types/react': ^19.2.0
-
-  '@types/react@18.3.31':
-    resolution: {integrity: sha512-vfEqpXTvwT91yhmwdfouStN2hSKwTvyRs8qpLfADyrq/kxDw0hZM7Wk9Ug1FELj8hIby+S/+kQCSRFF32nv2Qw==}
 
   '@types/react@19.2.16':
     resolution: {integrity: sha512-esJiCAnl0kfpNdE69f3So4WJUXy95dLZydX0KwK46riIHDzHM7O9Vtf9xCHW0PXIqvgqNrswl522kA/5yx+F4w==}
@@ -4469,11 +4471,11 @@ snapshots:
     dependencies:
       playwright: 1.60.0
 
-  '@react-native-async-storage/async-storage@3.1.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@18.3.31)(react@19.2.7))(react@19.2.7)':
+  '@react-native-async-storage/async-storage@3.1.1(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7))(react@19.2.7)':
     dependencies:
       idb: 8.0.3
       react: 19.2.7
-      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@18.3.31)(react@19.2.7)
+      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7)
 
   '@react-native/assets-registry@0.85.3': {}
 
@@ -4536,14 +4538,14 @@ snapshots:
 
   '@react-native/normalize-colors@0.85.3': {}
 
-  '@react-native/virtualized-lists@0.85.3(@types/react@18.3.31)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@18.3.31)(react@19.2.7))(react@19.2.7)':
+  '@react-native/virtualized-lists@0.85.3(@types/react@19.2.16)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7))(react@19.2.7)':
     dependencies:
       invariant: 2.2.4
       nullthrows: 1.1.1
       react: 19.2.7
-      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@18.3.31)(react@19.2.7)
+      react-native: 0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7)
     optionalDependencies:
-      '@types/react': 18.3.31
+      '@types/react': 19.2.16
 
   '@rollup/rollup-android-arm-eabi@4.61.1':
     optional: true
@@ -4812,16 +4814,9 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@types/prop-types@15.7.15': {}
-
   '@types/react-dom@19.2.3(@types/react@19.2.16)':
     dependencies:
       '@types/react': 19.2.16
-
-  '@types/react@18.3.31':
-    dependencies:
-      '@types/prop-types': 15.7.15
-      csstype: 3.2.3
 
   '@types/react@19.2.16':
     dependencies:
@@ -6142,7 +6137,7 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-native@0.85.3(@babel/core@7.29.7)(@types/react@18.3.31)(react@19.2.7):
+  react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7):
     dependencies:
       '@react-native/assets-registry': 0.85.3
       '@react-native/codegen': 0.85.3(@babel/core@7.29.7)
@@ -6150,7 +6145,7 @@ snapshots:
       '@react-native/gradle-plugin': 0.85.3
       '@react-native/js-polyfills': 0.85.3
       '@react-native/normalize-colors': 0.85.3
-      '@react-native/virtualized-lists': 0.85.3(@types/react@18.3.31)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@18.3.31)(react@19.2.7))(react@19.2.7)
+      '@react-native/virtualized-lists': 0.85.3(@types/react@19.2.16)(react-native@0.85.3(@babel/core@7.29.7)(@types/react@19.2.16)(react@19.2.7))(react@19.2.7)
       abort-controller: 3.0.0
       anser: 1.4.10
       ansi-regex: 5.0.1
@@ -6178,7 +6173,7 @@ snapshots:
       ws: 7.5.11
       yargs: 17.7.2
     optionalDependencies:
-      '@types/react': 18.3.31
+      '@types/react': 19.2.16
     transitivePeerDependencies:
       - '@babel/core'
       - '@react-native-community/cli'

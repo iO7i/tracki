@@ -2,16 +2,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppState, BackHandler, Linking, Platform } from "react-native";
 import type { NativeBindings } from "./adapter";
 
-/** Real React Native bindings (typechecked against shims.d.ts in-repo; the
- *  host app's actual react-native types apply when consumed). */
+/** Real React Native bindings. The native build typecheck uses installed peer
+ *  types; the lightweight monorepo check also supports shims.d.ts. */
 export function nativeBindings(): NativeBindings {
+  if (Platform.OS !== "ios" && Platform.OS !== "android") {
+    throw new Error("Tracki native bindings require iOS or Android");
+  }
   return {
     storage: {
       get: (k) => AsyncStorage.getItem(k),
       set: (k, v) => AsyncStorage.setItem(k, v),
+      remove: (k) => AsyncStorage.removeItem(k),
     },
     platform: Platform.OS === "ios" ? "ios" : "android",
     osVersion: String(Platform.Version),
+    appState: AppState.currentState === "active" ? "active" : "background",
+    getInitialDeepLink: () => Linking.getInitialURL(),
     openUrl: (url) => {
       void Linking.openURL(url).catch(() => {});
     },

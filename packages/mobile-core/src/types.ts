@@ -30,6 +30,7 @@ export interface EventInput {
   url?: string;
   referrer?: string;
   props?: Record<string, unknown>;
+  traceContext?: { traceId: string; spanId: string; parentSpanId?: string };
 }
 
 export interface Batch {
@@ -40,6 +41,20 @@ export interface Batch {
   sentAt: number;
   device: DeviceInfo;
   events: EventInput[];
+  /** Opaque server-issued binding; never a client asserted account id. */
+  scopeTag?: string;
+  build?: BuildIdentity;
+}
+
+export interface CapturePolicy {
+  diagnostics: boolean;
+  activity: boolean;
+}
+
+export interface BuildIdentity {
+  buildId?: string;
+  runtimeVersion?: string;
+  updateId?: string;
 }
 
 // ── Injected platform adapters ───────────────────────────────────────────────
@@ -48,6 +63,7 @@ export interface Batch {
 export interface KeyValueStorage {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
+  remove?(key: string): Promise<void>;
 }
 
 /** HTTP transport; default implementation uses global fetch. */
@@ -155,4 +171,12 @@ export interface TrackiConfig {
   clock?: Clock;
   /** Test seam: ids default to crypto.randomUUID-based. */
   idFactory?: (prefix: string) => string;
+  /** Collection stays off until the host has established its policy. */
+  capturePolicy?: CapturePolicy;
+  /** Isolates persisted identity, queue and caps between apps/environments. */
+  storageNamespace?: string;
+  environment?: "production" | "staging" | "development";
+  scopeTag?: string;
+  build?: BuildIdentity;
+  initialAppState?: "active" | "background";
 }

@@ -1,11 +1,5 @@
 import type { Clock, KeyValueStorage } from "./types";
 
-const ANON_KEY = "tracki_anon";
-const USER_KEY = "tracki_user";
-const SESSION_KEY = "tracki_session";
-const SESSION_TS_KEY = "tracki_session_ts";
-
-/** Same rotation rule as the web snippet: 30 min of inactivity = new session. */
 export const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 export function defaultIdFactory(prefix: string): string {
@@ -15,71 +9,96 @@ export function defaultIdFactory(prefix: string): string {
   return `${prefix}_${rand}`;
 }
 
-/**
- * Visitor identity over an injected async store. Hydrated once at init; all
- * reads are then synchronous in-memory, writes persist fire-and-forget (the
- * memory copy is authoritative for the process lifetime — mirroring the
- * snippet's localStorage-with-memory-fallback semantics).
- */
+/** Non-secret deterministic storage partition. Never store an endpoint credential. */
+export function storageNamespace(
+  key: string,
+  endpoint: string,
+  environment = "production",
+): string {
+  let h = 2166136261;
+  for (const c of `${key}|${endpoint}|${environment}`) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return `tracki:v2:${(h >>> 0).toString(36)}`;
+}
+
 export class Identity {
   private anonId = "";
   private userId: string | undefined;
   private sessionId = "";
   private lastActivity = 0;
+  private writes: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly storage: KeyValueStorage,
     private readonly now: Clock,
     private readonly newId: (prefix: string) => string = defaultIdFactory,
+    private readonly namespace = "tracki:v2:default",
   ) {}
 
-  /** Load persisted identity; create what's missing. Call once before use. */
+  private key(name: string): string {
+    return `${this.namespace}:${name}`;
+  }
+
   async hydrate(): Promise<void> {
-    const [anon, user, sess, ts] = await Promise.all([
-      this.storage.get(ANON_KEY).catch(() => null),
-      this.storage.get(USER_KEY).catch(() => null),
-      this.storage.get(SESSION_KEY).catch(() => null),
-      this.storage.get(SESSION_TS_KEY).catch(() => null),
-    ]);
-    this.anonId = anon || this.persist(ANON_KEY, this.newId("anon"));
+    const [anon, user, sess, ts] = await Promise.all(
+      ["anon", "user", "session", "session_ts"].map((name) =>
+        this.storage.get(this.key(name)).catch(() => null),
+      ),
+    );
+    this.anonId = anon || this.persist("anon", this.newId("anon"));
     this.userId = user || undefined;
     this.sessionId = sess || "";
     this.lastActivity = Number(ts ?? 0) || 0;
-    // Ensure a valid session exists (also rotates an expired persisted one).
     this.touchSession();
+    await this.writes;
   }
 
-  private persist(key: string, value: string): string {
-    void this.storage.set(key, value).catch(() => {});
+  private persist(name: string, value: string): string {
+    this.writes = this.writes.then(() => this.storage.set(this.key(name), value)).catch(() => {});
     return value;
   }
 
   getAnonId(): string {
     return this.anonId;
   }
-
   getUserId(): string | undefined {
     return this.userId;
   }
-
   setUserId(userId: string): void {
     this.userId = userId;
-    this.persist(USER_KEY, userId);
+    this.persist("user", userId);
   }
 
-  /** Current session id; rotates after 30 min of inactivity, stamps activity. */
   touchSession(): string {
     const t = this.now();
-    if (!this.sessionId || t - this.lastActivity > SESSION_TIMEOUT_MS) {
-      this.sessionId = this.persist(SESSION_KEY, this.newId("sess"));
-    }
+    if (!this.sessionId || t - this.lastActivity > SESSION_TIMEOUT_MS) this.rotateSession();
     this.lastActivity = t;
-    this.persist(SESSION_TS_KEY, String(t));
+    this.persist("session_ts", String(t));
     return this.sessionId;
   }
 
-  /** Read without stamping activity (used when building batches). */
+  rotateSession(): void {
+    this.sessionId = this.persist("session", this.newId("sess"));
+    this.lastActivity = this.now();
+    this.persist("session_ts", String(this.lastActivity));
+  }
+
   currentSession(): string {
     return this.sessionId;
+  }
+
+  /** Logout clears this namespace only; serialized writes cannot restore the old user. */
+  async reset(): Promise<void> {
+    this.userId = undefined;
+    this.anonId = this.newId("anon");
+    this.rotateSession();
+    this.persist("anon", this.anonId);
+    this.writes = this.writes
+      .then(() =>
+        this.storage.remove
+          ? this.storage.remove(this.key("user"))
+          : this.storage.set(this.key("user"), ""),
+      )
+      .catch(() => {});
+    await this.writes;
   }
 }

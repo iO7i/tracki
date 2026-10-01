@@ -5,6 +5,7 @@ import { CcoError, event, id, integer, object } from "./contract";
 import { readRecordings } from "./recordings";
 import { type CcoStore, parseBinding } from "./store";
 import { acceptTrustedBrowser } from "./trusted-browser";
+import { acceptTrustedNative } from "./trusted-native";
 export function registerCcoRoutes(app: FastifyInstance, store: CcoStore, config: CcoConfig): void {
   const key = (header: unknown) =>
     typeof header === "string" && header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -58,6 +59,19 @@ export function registerCcoRoutes(app: FastifyInstance, store: CcoStore, config:
     } catch (e) {
       const f = failure(e);
       return reply.code(f.status).send({ error: f.code });
+    }
+  });
+  app.post("/internal/cco/native-batches", async (request, reply) => {
+    reply.header("cache-control", "no-store");
+    const scope = config.projects.find((p) =>
+      constantEqual(key(request.headers.authorization), p.producerKey),
+    );
+    if (!scope) return reply.code(403).send({ error: "forbidden" });
+    try {
+      return reply.code(202).send(await acceptTrustedNative(request.body, scope));
+    } catch (error) {
+      const result = failure(error);
+      return reply.code(result.status).send({ error: result.code });
     }
   });
   app.post("/internal/cco/bindings", async (req, reply) => {

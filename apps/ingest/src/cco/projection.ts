@@ -1,4 +1,5 @@
 import type { StoredEvent, StruggleDetection } from "@tracki/shared";
+import { nativeBuild } from "@tracki/shared/mobile-diagnostics";
 import type { Project } from "./config";
 import { type CcoEvent, event, nullableId, sessionRef, traceId } from "./contract";
 export function projectBehavior(e: StoredEvent, scope: Project): CcoEvent {
@@ -14,6 +15,8 @@ export function projectBehavior(e: StoredEvent, scope: Project): CcoEvent {
     props.ccoTrace && typeof props.ccoTrace === "object"
       ? (props.ccoTrace as Record<string, unknown>)
       : {};
+  const build = nativeBuild(props.ccoBuild);
+  const native = e.platform === "ios" || e.platform === "android";
   let trace: string | null = null;
   let cause: string | null = null;
   let span: string | null = null;
@@ -28,7 +31,7 @@ export function projectBehavior(e: StoredEvent, scope: Project): CcoEvent {
   }
   return event({
     version: 1,
-    eventId: `browser:${e.event_id}`,
+    eventId: `${native ? "native" : "browser"}:${e.event_id}`,
     orgId: e.org_id,
     projectId: e.project_id,
     accountId: null,
@@ -42,7 +45,7 @@ export function projectBehavior(e: StoredEvent, scope: Project): CcoEvent {
     parentSpanId: parent,
     causedBy: cause,
     authority: "observed",
-    source: "tracki.browser",
+    source: native ? "tracki.native" : "tracki.browser",
     operation:
       e.type === "track" &&
       [
@@ -58,11 +61,13 @@ export function projectBehavior(e: StoredEvent, scope: Project): CcoEvent {
         "first_sync_completed",
         "first_profit_report_viewed",
         "subscription_started",
+        "native_crash",
       ].includes(String(props.name))
         ? String(props.name)
         : e.type,
     outcome:
       e.type === "error" ||
+      props.name === "native_crash" ||
       e.type === "payment_fail" ||
       e.type === "otp_fail" ||
       props.name === "cco_network_failure" ||
@@ -71,11 +76,22 @@ export function projectBehavior(e: StoredEvent, scope: Project): CcoEvent {
         props.statusCode >= 400)
         ? "failed"
         : "observed",
-    errorCode: e.type === "error" ? "CLIENT_ERROR" : null,
+    errorCode:
+      e.type === "error"
+        ? native && ["JS_ERROR", "JS_FATAL", "NATIVE_CRASH"].includes(String(props.code))
+          ? String(props.code)
+          : "CLIENT_ERROR"
+        : props.name === "native_crash"
+          ? "NATIVE_CRASH"
+          : null,
     route: e.path,
-    release: /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(e.app_version) ? e.app_version : null,
+    release:
+      (native && (build.updateId || build.buildId)) ||
+      (/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(e.app_version) ? e.app_version : null),
     occurredAt: e.ts,
     receivedAt: e.received_at,
+    durationMs: native && typeof props.durationMs === "number" ? props.durationMs : null,
+    httpStatus: native && typeof props.statusCode === "number" ? props.statusCode : null,
     replay: null,
   });
 }
@@ -92,6 +108,6 @@ export function projectDetection(
     operation: d.type,
     outcome: "failed",
     errorCode: d.type,
-    causedBy: `browser:${trigger.event_id}`,
+    causedBy: `${trigger.platform === "ios" || trigger.platform === "android" ? "native" : "browser"}:${trigger.event_id}`,
   });
 }
