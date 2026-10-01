@@ -2,6 +2,7 @@ import type { StoredEvent, StruggleDetection } from "@tracki/shared";
 import { nativeBuild } from "@tracki/shared/mobile-diagnostics";
 import type { Project } from "./config";
 import { type CcoEvent, event, nullableId, sessionRef, traceId } from "./contract";
+import { nativeProtocol, operationCorrelation } from "./native-meta";
 export function projectBehavior(e: StoredEvent, scope: Project): CcoEvent {
   let props: Record<string, unknown> = {};
   try {
@@ -93,6 +94,14 @@ export function projectBehavior(e: StoredEvent, scope: Project): CcoEvent {
     durationMs: native && typeof props.durationMs === "number" ? props.durationMs : null,
     httpStatus: native && typeof props.statusCode === "number" ? props.statusCode : null,
     replay: null,
+    ...(native
+      ? {
+          nativeProtocol: nativeProtocol(props.ccoProtocol),
+          correlation: operationCorrelation(props.ccoCorrelation, true),
+          sampleRate: props.ccoSampleRate,
+          fingerprint: props.ccoFingerprint,
+        }
+      : {}),
   });
 }
 export function projectDetection(

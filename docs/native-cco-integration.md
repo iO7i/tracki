@@ -35,13 +35,12 @@ does not authenticate merchants, deploy a route or enable collection.
 Use the matching native-enabled `@vertex-ksa/cco` 0.4.0 release artifact from
 `vertex-platform/packages/cco` in the application backend. The Tracki native
 SDK is a different package; installing it does not update that server package.
-Both are source changes in this workstream, awaiting their normal release and
-deployment. Existing web recording behavior is separate from this native
+SDK 0.2.1 is privately published; CCO 0.4.0 publication uses its guarded repository workflow. Backend deployment and migrations remain separate reviewed steps. Existing web recording behavior is separate from this native
 integration.
 
 Before starting the native-enabled producer, apply its outbox migrations using
 the service's migration role. Existing installations with migration 001 applied
-need `migrations/002_cco_native.sql`; fresh installations need 001 followed by
+need migrations 002 and 003 if neither is applied; fresh installations need 001 followed by
 002 and 003 in order. Migration 003 adds `native-health` commands. Migration 002 expands the outbox command-kind constraint to include
 `native`. It belongs in each participating service-owned outbox database,
 including staging; do not apply it indiscriminately to business databases.

@@ -33,6 +33,9 @@ async function main(): Promise<void> {
         await tx`DELETE FROM telemetry_inbox WHERE created_at < to_timestamp(${cutoff} / 1000.0)`;
         await tx`DELETE FROM telemetry_state WHERE expires_at < now()`;
         await tx`DELETE FROM cco_visual_chunks WHERE received_at < ${cutoff}`;
+        await tx`DELETE FROM cco_native_health WHERE received_at < ${cutoff}`;
+        await tx`DELETE FROM cco_native_sessions WHERE received_at < ${cutoff}`;
+        await tx`DELETE FROM cco_native_incidents WHERE last_seen < ${cutoff}`;
       });
       retentionHealthy = true;
     } catch {

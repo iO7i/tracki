@@ -1,8 +1,7 @@
 # Native Tracki/CCO store-submission worksheet
 
-Reviewed 1 October 2026. Scope: the local event-only `@tracki/mobile-core`
-and `@tracki/react-native` 0.1.0 integration, with authenticated native CCO
-bootstrap/forwarding. This is a preparation worksheet, not a submitted store
+Updated 2 October 2026. Scope: `@io7i/tracki-mobile-core` and
+`@io7i/tracki-react-native` 0.2.x, with authenticated native CCO forwarding. This is a preparation worksheet, not a submitted store
 form, store approval, legal opinion, or proof of physical-device behavior.
 
 ## What this implementation does
