@@ -15,7 +15,7 @@ environment label supplied by the app is not a grant to access production.
 
 ## Backend integration contract
 
-1. Expose native CCO bootstrap/events handlers behind the host app's existing
+1. Expose native CCO bootstrap/events/health handlers behind the host app's existing
    native authentication guard.
 2. Resolve the authenticated account and active store installation on the
    backend. Never accept identity, policy or collector credentials from an
@@ -27,12 +27,12 @@ environment label supplied by the app is not a grant to access production.
    forward only the approved schema to the collector. Keep existing business
    input handling separate from diagnostic evidence.
 
-The bootstrap/events API requires host-specific wiring. Installing the SDK
+The bootstrap/events/health API requires host-specific wiring. Installing the SDK
 does not authenticate merchants, deploy a route or enable collection.
 
 ### Server package, schema and credentials
 
-Use the matching native-enabled `@vertex/cco` 0.3.0 release artifact from
+Use the matching native-enabled `@vertex-ksa/cco` 0.4.0 release artifact from
 `vertex-platform/packages/cco` in the application backend. The Tracki native
 SDK is a different package; installing it does not update that server package.
 Both are source changes in this workstream, awaiting their normal release and
@@ -42,7 +42,7 @@ integration.
 Before starting the native-enabled producer, apply its outbox migrations using
 the service's migration role. Existing installations with migration 001 applied
 need `migrations/002_cco_native.sql`; fresh installations need 001 followed by
-002. Migration 002 expands the outbox command-kind constraint to include
+002 and 003 in order. Migration 003 adds `native-health` commands. Migration 002 expands the outbox command-kind constraint to include
 `native`. It belongs in each participating service-owned outbox database,
 including staging; do not apply it indiscriminately to business databases.
 
@@ -60,7 +60,7 @@ matching Tracki collector implementation before forwarding native commands.
 import express from "express";
 import {
   ccoNativeExpressHandler, type CapturePolicy, type RequestLike, type Scope,
-} from "@vertex/cco";
+} from "@vertex-ksa/cco";
 
 // Host-owned services below already verify native authentication and store access.
 const authenticateBearer = async (
@@ -81,6 +81,8 @@ app.post("/api/cco/native/bootstrap", nativeJson,
   ccoNativeExpressHandler(appKey, "bootstrap", authenticateBearer, decision));
 app.post("/api/cco/native/events", nativeJson,
   ccoNativeExpressHandler(appKey, "events", authenticateBearer, decision));
+app.post("/api/cco/native/health", nativeJson,
+  ccoNativeExpressHandler(appKey, "health", authenticateBearer, decision));
 ```
 
 The example's auth, identity and policy services are host integration seams,
@@ -104,7 +106,7 @@ import {
   createTrackiClient,
   nativeBindings,
   observeJavaScriptErrors,
-} from "@tracki/react-native";
+} from "@io7i/tracki-react-native";
 
 const randomHex = (bytes: number) => Array.from(Crypto.getRandomBytes(bytes),
   (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -200,33 +202,19 @@ uploads no crash file and cannot guarantee delivery during termination.
 
 ## Package distribution and Expo builds
 
-Build `@tracki/mobile-core` first and then `@tracki/react-native`. The SDK's
-React/RN/AsyncStorage imports stay external. The core bundles its pure shared
-sanitizer, leaving no private workspace dependency in the installed runtime.
-Distribute both matching `0.1.0` tarballs or publish both packages through the
-normal release process. Build scripts do not publish or deploy packages.
+Install matching exact `@io7i/tracki-mobile-core` and `@io7i/tracki-react-native`
+0.2.1 candidates from private GitHub Packages associated with `iO7i/tracki`.
+0.2.0 is already published; 0.2.1 adds approved static HR/platform routes and
+finite timer validation. Publication and clean-consumer receipts must accompany
+the final candidate. Configure `@io7i:registry=https://npm.pkg.github.com`
+and provide repository-authorized read access through an environment-backed
+npmrc. Keep the lockfile; never commit a credential. No production `file:` or
+workspace dependency is required. React/RN/AsyncStorage remain host peers.
 
-Before registry publication, pnpm consumers of local tarballs must also override
-the SDK's exact core dependency to the matching local artifact:
-
-```json
-{
-  "dependencies": {
-    "@tracki/mobile-core": "file:../../artifacts/tracki-mobile-core-0.1.0.tgz",
-    "@tracki/react-native": "file:../../artifacts/tracki-react-native-0.1.0.tgz"
-  },
-  "pnpm": {
-    "overrides": {
-      "@tracki/mobile-core": "file:../../artifacts/tracki-mobile-core-0.1.0.tgz"
-    }
-  }
-}
-```
-
-Paths are relative to the consuming app; adjust them for its checkout. The
-public Expo reference uses this local distribution path. No registry
-publication is implied by these package versions.
-
+The real mobile platform is `iO7i/mobile-app-kernel`, `expo-mobile-apps`.
+HR is the representative integration; its owning mobile chat owns app files
+and behavior. Use the existing session/company scope contract. A fixture or
+unavailable backend provider is not real authenticated integration acceptance.
 The declaration build excludes native shims and checks actual installed peer
 types. It does not establish compatibility with every Expo SDK/device. The
 event adapter needs no custom native module beyond AsyncStorage. A native

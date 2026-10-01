@@ -133,7 +133,7 @@ importers:
         specifier: 0.3.14
         version: 0.3.14
       '@tracki/mobile-core':
-        specifier: workspace:@io7i/tracki-mobile-core@0.2.0
+        specifier: workspace:@io7i/tracki-mobile-core@0.2.1
         version: link:../../packages/mobile-core
       '@types/node':
         specifier: ^22.10.0
@@ -218,7 +218,7 @@ importers:
   packages/sdk-react-native:
     dependencies:
       '@io7i/tracki-mobile-core':
-        specifier: workspace:0.2.0
+        specifier: workspace:0.2.1
         version: link:../mobile-core
     devDependencies:
       '@react-native-async-storage/async-storage':

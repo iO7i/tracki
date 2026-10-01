@@ -28,6 +28,11 @@ async function fixture(options: { healthAck?: boolean; eventStatus?: number; sig
   return { bridge, client, calls, data };
 }
 describe("authenticated native bridge", () => {
+  it("rejects non-finite timer configuration before creating resources", async () => {
+    for (const timing of [{ timeoutMs: NaN }, { timeoutMs: Infinity }, { healthIntervalMs: NaN }, { healthIntervalMs: Infinity }]) {
+      await expect(createCcoNativeBridge({ apiOrigin: "https://app.test", namespace: "hr:staging", grantStorage: { get: async () => null, set: async () => {}, remove: async () => {} }, getAuthorization: async () => null, ...timing })).rejects.toMatchObject({ code: "invalid-configuration" });
+    }
+  });
   it("sends health without manufacturing events and accepts only exact receipts", async () => {
     const f = await fixture(); await f.bridge.connect(f.client); await f.bridge.reportHealth();
     const report = f.calls.find(call => call.url.endsWith("/health"));

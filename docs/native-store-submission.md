@@ -16,7 +16,7 @@ The shared client/collector allowlist limits events to fixed codes, bounded
 numbers/booleans, authored object IDs, sanitized route templates and trace
 identifiers. It excludes screen recording, screenshots, native view trees,
 touch coordinates, keystrokes, input values, error messages/stacks, request or
-response bodies, and authorization/header contents. It cannot produce native
+response bodies, authorization and arbitrary header contents. Only validated opaque request/operation/job IDs and fixed rejection categories are read. It cannot produce native
 visual replay. Inspect `packages/shared/src/mobile-diagnostics.ts` when
 changing this inventory; names accepted by that schema are not automatically
 collected by every host.
@@ -26,6 +26,20 @@ handler. `observeNativeCrashSignals` accepts a no-payload signal from a
 host-owned crash provider and reports `NATIVE_CRASH`. It does not install a
 native crash reporter, collect a crash dump, symbolicate it, or guarantee
 delivery when the OS terminates a process.
+
+## Additional bounded diagnostics in this wave
+
+Health reports contain queue depth/bytes/age, fixed rejection categories,
+receipt/storage/expiry/capacity/sampling counters, reporter revision and time.
+They are authenticated and account/scope linked even when there are no events.
+They contain no user input. Counters coalesce for up to one second; process
+termination may lose that interval. A missing heartbeat is incomplete evidence.
+
+Optional normalized JavaScript fingerprints hash recognized bundle numeric
+frame locations only; message, function name, path and raw stack are excluded.
+Opaque operation/job/request IDs join authorized backend evidence without
+copying business inputs. These fields belong in the shipped diagnostic inventory.
+They do not add native recording or guarantee terminal crash delivery.
 
 ## Data map: declare the shipped app, not this worksheet
 

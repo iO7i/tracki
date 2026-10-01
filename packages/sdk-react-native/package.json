@@ -1,6 +1,6 @@
 {
   "name": "@io7i/tracki-react-native",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": false,
   "type": "module",
   "exports": {
@@ -18,7 +18,7 @@
     "check-native-types": "tsc -p tsconfig.build.json --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@io7i/tracki-mobile-core": "workspace:0.2.0"
+    "@io7i/tracki-mobile-core": "workspace:0.2.1"
   },
   "peerDependencies": {
     "@react-native-async-storage/async-storage": ">=1.19.0",

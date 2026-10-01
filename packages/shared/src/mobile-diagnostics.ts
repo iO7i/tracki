@@ -89,6 +89,9 @@ const screens = new Set(
     " ",
   ),
 );
+// Approved semantic vocabulary for the real eleven-app mobile platform.
+// Dynamic names, query values and opaque path identifiers remain redacted.
+for (const name of "hr leave expenses attendance documents payroll employees company companies approvals requests request submit submission submissions scheduling schedule tasks forms projects inventory invoice crm erp tickets conversations sessions workspace workspaces tenant tenants transcript transcripts recording recordings media upload uploads recovery calendar shifts timesheets maintenance purchases suppliers warehouse warehouses stock receipt receipts fulfillment".split(" ")) screens.add(name);
 const codes = new Set(["CLIENT_ERROR", "JS_ERROR", "JS_FATAL", "NATIVE_CRASH", "NETWORK_FAILURE"]);
 const valueSets: Record<string, Set<string>> = {
   launch: new Set(["cold", "warm"]),

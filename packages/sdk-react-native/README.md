@@ -7,7 +7,7 @@ raw stacks, request bodies, or arbitrary header contents. Only allowlisted opaqu
 
 ## Installation
 
-Install matching `@io7i/tracki-react-native` and `@io7i/tracki-mobile-core` 0.2.0 packages
+Install matching `@io7i/tracki-react-native` and `@io7i/tracki-mobile-core` 0.2.1 packages
 and the host peer dependencies. Expo apps should install AsyncStorage through
 `npx expo install @react-native-async-storage/async-storage` so its native
 version matches Expo. React/RN remain supplied by the existing app.

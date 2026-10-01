@@ -91,6 +91,7 @@ export async function createCcoNativeBridge(
   }
   const fetcher = options.fetch ?? globalThis.fetch;
   const now = options.clock ?? Date.now;
+  if ((options.timeoutMs !== undefined && !Number.isFinite(options.timeoutMs)) || (options.healthIntervalMs !== undefined && !Number.isFinite(options.healthIntervalMs))) throw new CcoNativeBridgeError("invalid-configuration");
   const timeout = Math.max(1000, Math.min(30000, options.timeoutMs ?? 10000));
   const healthInterval = Math.max(60000, Math.min(900000, options.healthIntervalMs ?? 300000));
   const storageKey = `${storagePart(options.namespace)}.cco.grants`;

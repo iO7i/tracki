@@ -3,7 +3,7 @@ export interface CollectionBudget {
   batchSize: number; batchByteLimit: number; routineSuccessSampleRate: number;
   unusualLatencyMs: number;
 }
-export const nativeProtocol = Object.freeze({ sdkVersion: "0.2.0", schemaVersion: 2,
+export const nativeProtocol = Object.freeze({ sdkVersion: "0.2.1", schemaVersion: 2,
   capabilities: ["capture-health-v1", "operation-correlation-v1", "sampling-v1", "build-identity-v1", "diagnostics-v2"] });
 export const defaultCollectionBudget: CollectionBudget = {
   maxQueuedEvents: 500, maxQueuedBytes: 512 * 1024, eventTtlMs: 23 * 3600000,
