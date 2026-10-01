@@ -13,6 +13,7 @@ import {
   object,
   sessionRef,
 } from "./contract";
+import { appendNativeIncident, ensureNativeDiagnostics } from "./native-store";
 export type Binding = {
   orgId: string;
   projectId: string;
@@ -73,6 +74,7 @@ export async function ensureCco(sql: postgres.Sql): Promise<void> {
   await sql`CREATE INDEX IF NOT EXISTS cco_records_time ON cco_records(project_id,event_time DESC)`;
   await sql`CREATE INDEX IF NOT EXISTS cco_records_session ON cco_records(project_id,session_ref,event_time)`;
   await sql`CREATE INDEX IF NOT EXISTS cco_records_account ON cco_records(account_id,event_time DESC)`;
+  await ensureNativeDiagnostics(sql);
 }
 /** Caller may pass the EXISTING inbox transaction: CCO acceptance is atomic with telemetry acceptance. */
 export async function appendCco(
@@ -93,7 +95,7 @@ export async function appendCco(
       const old =
         await tx`SELECT digest FROM cco_records WHERE org_id=${e.orgId} AND project_id=${e.projectId} AND event_id=${e.eventId}`;
       if (old[0]?.digest !== payloadHash) throw new CcoError("cco_event_identity_conflict", 409);
-    }
+    } else await appendNativeIncident(tx, e);
   }
 }
 export class PostgresCcoStore implements CcoStore {

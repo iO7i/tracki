@@ -2,6 +2,7 @@ import type { StoredEvent } from "@tracki/shared";
 import type postgres from "postgres";
 import { configuration } from "./cco/config";
 import { CcoError, digest } from "./cco/contract";
+import { type NativeAcceptanceMetadata, acceptNativeMetadata } from "./cco/native-store";
 import { projectBehavior } from "./cco/projection";
 import { appendCco, ensureCco } from "./cco/store";
 import type { TrustedBrowserScope } from "./cco/trusted-browser";
@@ -44,6 +45,7 @@ export async function acceptEvents(
   events: StoredEvent[],
   sql: postgres.Sql = pg(),
   trustedBrowser?: TrustedBrowserScope,
+  nativeMetadata?: NativeAcceptanceMetadata,
 ): Promise<StoredEvent[]> {
   return sql.begin(async (tx) => {
     const accepted: StoredEvent[] = [];
@@ -82,6 +84,8 @@ export async function acceptEvents(
         return [projection];
       });
       await appendCco(tx, projected);
+      if (nativeMetadata && trustedBrowser)
+        await acceptNativeMetadata(tx, trustedBrowser, nativeMetadata);
     }
     return accepted;
   }) as Promise<StoredEvent[]>;

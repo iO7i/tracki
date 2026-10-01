@@ -56,6 +56,9 @@ interface EngineDeps {
   renderer?: Renderer;
   cta: CtaRouter;
   now: Clock;
+  storageNamespace?: string;
+  enabled?: () => boolean;
+  isForeground?: () => boolean;
 }
 
 /**
@@ -70,6 +73,17 @@ export function createActionEngine(deps: EngineDeps) {
   const shownThisSession = new Set<string>();
   let caps: Record<string, number> = {};
   let capsLoaded = false;
+  let started = false;
+  let disposed = false;
+  let generation = 0;
+  let capsWrites: Promise<void> = Promise.resolve();
+  const timers = new Set<ReturnType<typeof setTimeout>>();
+  const capsKey = `${deps.storageNamespace ?? "tracki:v2:default"}:${CAPS_KEY}`;
+  const allowed = () => !disposed && (deps.enabled?.() ?? true) && (deps.isForeground?.() ?? true);
+  const clearTimers = () => {
+    for (const timer of timers) clearTimeout(timer);
+    timers.clear();
+  };
 
   const emit = (type: string, actionId: string, variant: string, channel?: string) =>
     deps.queue.enqueue({
@@ -79,18 +93,33 @@ export function createActionEngine(deps: EngineDeps) {
       props: { action_id: actionId, variant, ...(channel ? { channel } : {}) },
     });
 
-  async function loadCaps(): Promise<void> {
+  async function loadCaps(epoch: number): Promise<void> {
+    let loaded: Record<string, number> = {};
     try {
-      caps = JSON.parse((await deps.storage.get(CAPS_KEY)) ?? "{}") as Record<string, number>;
+      const value: unknown = JSON.parse((await deps.storage.get(capsKey)) ?? "{}");
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        loaded = Object.fromEntries(
+          Object.entries(value).filter(
+            ([key, count]) =>
+              /^[A-Za-z0-9_-]{1,128}$/.test(key) &&
+              typeof count === "number" &&
+              Number.isSafeInteger(count) &&
+              count >= 0,
+          ),
+        );
+      }
     } catch {
-      caps = {};
+      loaded = {};
     }
+    if (disposed || epoch !== generation) return;
+    caps = loaded;
     capsLoaded = true;
   }
 
   function bumpCap(a: ManifestAction): void {
     caps[a.id] = (caps[a.id] ?? 0) + 1;
-    void deps.storage.set(CAPS_KEY, JSON.stringify(caps)).catch(() => {});
+    const snapshot = JSON.stringify(caps);
+    capsWrites = capsWrites.then(() => deps.storage.set(capsKey, snapshot)).catch(() => {});
   }
 
   function localized(a: ManifestAction, variant: "A" | "B"): LocalizedContent {
@@ -105,12 +134,13 @@ export function createActionEngine(deps: EngineDeps) {
   }
 
   function maybeShow(a: ManifestAction): void {
-    if (!deps.renderer) return;
+    if (!allowed() || !deps.renderer) return;
     if (shownThisScreen.has(a.id)) return;
     if (a.urlContains && !deps.currentPath().includes(a.urlContains)) return;
     if (a.frequencyCap && (caps[a.id] ?? 0) >= a.frequencyCap) return;
     const variant = pickVariant(deps.anonId(), a.id, !!a.contentB);
     const content = localized(a, variant);
+    const intentGeneration = generation;
     const intent: ActionIntent = {
       intent: "action",
       actionId: a.id,
@@ -120,11 +150,13 @@ export function createActionEngine(deps: EngineDeps) {
       steps: tourSteps(a),
       anchor: a.anchorSelector,
       activateCta: () => {
-        if (!content.cta) return;
+        if (!allowed() || intentGeneration !== generation || !content.cta) return;
         const kind = deps.cta.activate(content.cta);
         emit("action_click", a.id, variant, kind);
       },
-      dismiss: () => emit("action_dismiss", a.id, variant),
+      dismiss: () => {
+        if (allowed() && intentGeneration === generation) emit("action_dismiss", a.id, variant);
+      },
     };
     try {
       deps.renderer.show(intent);
@@ -142,24 +174,41 @@ export function createActionEngine(deps: EngineDeps) {
     for (const a of actions) if (a.trigger.kind === "pageview") maybeShow(a);
   }
 
+  function armTimers(): void {
+    clearTimers();
+    if (!allowed()) return;
+    for (const a of actions) {
+      if (a.trigger.kind !== "time_on_page") continue;
+      const timer = setTimeout(
+        () => {
+          timers.delete(timer);
+          maybeShow(a);
+        },
+        (a.trigger.seconds ?? 5) * 1000,
+      );
+      timers.add(timer);
+      (timer as { unref?: () => void }).unref?.();
+    }
+  }
+
   /** Fetch the mobile-surface manifest, then arm time-based triggers. */
   async function start(): Promise<void> {
-    await loadCaps();
+    if (disposed || started || !(deps.enabled?.() ?? true)) return;
+    started = true;
+    const pendingGeneration = generation;
+    await loadCaps(pendingGeneration);
+    if (disposed || generation !== pendingGeneration) return;
     try {
       const data = (await deps.transport.get(
         `${deps.endpoint}/v1/actions?key=${encodeURIComponent(deps.key)}&surface=mobile`,
       )) as { actions?: ManifestAction[] } | undefined;
+      if (disposed || generation !== pendingGeneration) return;
       if (Array.isArray(data?.actions)) actions.push(...data.actions);
     } catch {
       /* fail-silent */
     }
     evaluateScreen();
-    for (const a of actions) {
-      if (a.trigger.kind === "time_on_page") {
-        const t = setTimeout(() => maybeShow(a), (a.trigger.seconds ?? 5) * 1000);
-        (t as { unref?: () => void }).unref?.();
-      }
-    }
+    armTimers();
   }
 
   return {
@@ -168,13 +217,44 @@ export function createActionEngine(deps: EngineDeps) {
     onScreen(): void {
       shownThisScreen.clear();
       if (capsLoaded) evaluateScreen();
+      armTimers();
     },
     /** App went to background — the mobile analogue of exit intent. */
     onBackground(): void {
-      for (const a of actions) if (a.trigger.kind === "exit_intent") maybeShow(a);
+      clearTimers();
+    },
+    onForeground(): void {
+      if (capsLoaded) evaluateScreen();
+      armTimers();
+    },
+    pause(): void {
+      clearTimers();
+    },
+    async reset(): Promise<void> {
+      generation++;
+      clearTimers();
+      actions.length = 0;
+      started = false;
+      capsLoaded = false;
+      caps = {};
+      shownThisScreen.clear();
+      shownThisSession.clear();
+      try {
+        await capsWrites;
+        if (deps.storage.remove) await deps.storage.remove(capsKey);
+        else await deps.storage.set(capsKey, "{}");
+      } catch {
+        /* App remains usable if local persistence is unavailable. */
+      }
+    },
+    dispose(): void {
+      disposed = true;
+      generation++;
+      clearTimers();
     },
     /** A custom event — event triggers + goal attribution. */
     onTrack(name: string): void {
+      if (!allowed()) return;
       for (const a of actions) {
         if (a.trigger.kind === "event" && a.trigger.eventName === name) maybeShow(a);
         if (a.goalEvent === name && shownThisSession.has(a.id)) {

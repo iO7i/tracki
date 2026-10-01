@@ -6,8 +6,8 @@ import type { Batch, ChatIntent, KeyValueStorage, Transport } from "./types";
 
 /**
  * The TS reference implementation must reproduce the shared conformance
- * fixtures byte-for-byte (as parsed JSON). The Flutter/Swift/Kotlin SDKs
- * assert the SAME files — this is what keeps four codebases on one protocol.
+ * legacy journey through the explicit v2 privacy projection. Legacy fixtures
+ * remain unchanged for other language SDKs; this verifies intentional v2 differences.
  */
 
 const dir = join(__dirname, "../../../sdks/conformance");
@@ -31,7 +31,7 @@ function capturingTransport(): Transport & { posts: Array<{ url: string; body: u
     post: async (url, body) => {
       // Serialize exactly like a real HTTP transport would (drops undefineds).
       posts.push({ url, body: JSON.parse(JSON.stringify(body)) });
-      return { ok: true };
+      return { acceptedClientIds: (body as Batch).events?.map((event) => event.eventId) ?? [] };
     },
     get: async () => ({ actions: [] }),
   };
@@ -51,6 +51,7 @@ async function runJourney() {
     locale: journey.config.locale,
     device: journey.config.device,
     storage: memoryStorage(),
+    capturePolicy: { diagnostics: true, activity: true },
     transport,
     clock: () => t,
     idFactory: nextId,
@@ -68,15 +69,30 @@ describe("conformance: journey-batch.json", () => {
   it("produces exactly the expected /v1/events batch", async () => {
     const { transport } = await runJourney();
     const batches = transport.posts.filter((p) => p.url.endsWith("/v1/events"));
-    expect(batches).toHaveLength(1);
-    const batch = batches[0]?.body as Batch;
-    const ids = batch.events.map((event) => event.eventId);
-    expect(ids.every((id) => typeof id === "string" && /^evt_[A-Za-z0-9_-]+$/.test(id))).toBe(true);
-    expect(new Set(ids).size).toBe(batch.events.length);
-    // The optional identity extension leaves every legacy protocol field unchanged.
-    expect({ ...batch, events: batch.events.map(({ eventId, ...event }) => event) }).toEqual(
-      journey.expectedBatch,
-    );
+    expect(batches).toHaveLength(2);
+    const envelopes = batches.map((value) => value.body as Batch);
+    const events = envelopes.flatMap((batch) => batch.events);
+    const ids = events.map((event) => event.eventId);
+    expect(new Set(ids).size).toBe(events.length);
+    expect(envelopes[0]?.userId).toBeUndefined();
+    expect(envelopes[1]?.userId).toBe("user_42");
+    expect(envelopes[0]?.sentAt).toBe(1700000000000);
+    expect(envelopes[1]?.sentAt).toBe(1700000008000);
+    for (const batch of envelopes) {
+      expect(batch.protocol?.schemaVersion).toBe(2);
+      expect(batch.device.model).toBeUndefined();
+      expect(batch.health?.observed).toBeGreaterThan(0);
+    }
+    // Explicit v2 privacy projection of the legacy cross-language fixture:
+    // lowercase semantic routes, no referrers/model, creation-time identity.
+    const expected = journey.expectedBatch.events.map((event: Record<string, unknown>) => ({
+      type: event.type,
+      ts: event.ts,
+      path: (event.path as string).toLowerCase(),
+      props: event.props ?? {},
+    }));
+    expect(events.map(({ eventId, sampleRate, ...event }) => event)).toEqual(expected);
+    expect(events.every((event) => event.sampleRate === 1)).toBe(true);
   });
 });
 
@@ -86,7 +102,7 @@ describe("conformance: channel-requests.json", () => {
     client.openWhatsApp();
     await new Promise((r) => setTimeout(r, 0));
     const handoff = transport.posts.find((p) => p.url.endsWith(channels.whatsappHandoff.url));
-    expect(handoff?.body).toEqual(channels.whatsappHandoff.body);
+    expect(handoff?.body).toEqual({ ...channels.whatsappHandoff.body, path: "/checkout" });
   });
 
   it("sends the exact first chat turn", async () => {
@@ -104,6 +120,7 @@ describe("conformance: channel-requests.json", () => {
       locale: journey.config.locale,
       device: journey.config.device,
       storage: memoryStorage(),
+      capturePolicy: { diagnostics: true, activity: true },
       transport,
       clock: () => t,
       idFactory: nextId,
@@ -118,6 +135,6 @@ describe("conformance: channel-requests.json", () => {
     const chat = intents.find((i) => (i as { intent?: string }).intent === "chat") as ChatIntent;
     await chat.send(channels.chatFirstTurn.messageUsed);
     const turn = transport.posts.find((p) => p.url.endsWith(channels.chatFirstTurn.url));
-    expect(turn?.body).toEqual(channels.chatFirstTurn.body);
+    expect(turn?.body).toEqual({ ...channels.chatFirstTurn.body, path: "/checkout" });
   });
 });

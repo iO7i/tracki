@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createTracki, screenPath } from "./client";
-import { SESSION_TIMEOUT_MS } from "./identity";
+import { SESSION_TIMEOUT_MS, storageNamespace } from "./identity";
 import type { Batch, KeyValueStorage, RenderIntent, TrackiConfig, Transport } from "./types";
 
 // ── Test doubles ─────────────────────────────────────────────────────────────
@@ -36,7 +36,13 @@ function fakeTransport(routes: Record<string, unknown> = {}): Transport & { call
     calls,
     post: async (url, body) => {
       calls.push({ method: "POST", url, body });
-      return match(url);
+      const result = match(url);
+      return url.includes("/v1/events")
+        ? {
+            ...(result as object),
+            acceptedClientIds: (body as Batch).events.map((event) => event.eventId),
+          }
+        : result;
     },
     get: async (url) => {
       calls.push({ method: "GET", url });
@@ -73,6 +79,7 @@ async function makeClient(overrides: Partial<TrackiConfig> = {}) {
     idFactory: testIds,
     renderer: { show: (i) => intents.push(i) },
     openUrl: (u) => opened.push(u),
+    capturePolicy: { diagnostics: true, activity: true },
     ...overrides,
     storage,
     transport,
@@ -169,10 +176,12 @@ describe("identity", () => {
     const ctx = await makeClient();
     ctx.client.identify("user_42");
     await ctx.client.flush();
-    const [batch] = sentBatches(ctx.transport);
+    const batch = sentBatches(ctx.transport).find((batch) => batch.userId === "user_42");
     expect(batch?.userId).toBe("user_42");
     expect(batch?.events.some((e) => e.type === "identify")).toBe(true);
-    expect(ctx.storage.data.get("tracki_user")).toBe("user_42");
+    expect(ctx.storage.data.get(`${storageNamespace("pk_test", "https://ingest.test")}:user`)).toBe(
+      "user_42",
+    );
   });
 });
 
@@ -184,10 +193,10 @@ describe("screen tracking", () => {
     ctx.client.screen("Checkout");
     const events = await flushedEvents(ctx);
     const views = events.filter((e) => e.type === "screen_view");
-    expect(views.map((v) => v.path)).toEqual(["/Home", "/Checkout"]);
-    expect(views[1]?.referrer).toBe("/Home");
+    expect(views.map((v) => v.path)).toEqual(["/home", "/checkout"]);
+    expect(views[1]?.referrer).toBeUndefined();
     const leave = events.find((e) => e.type === "screen_leave");
-    expect(leave?.path).toBe("/Home");
+    expect(leave?.path).toBe("/home");
     expect(leave?.props).toEqual({ durationMs: 4200 });
   });
 });
@@ -202,7 +211,7 @@ describe("mobile event API", () => {
     ctx.client.flow("abandon", "checkout");
     ctx.client.permissionDenied("camera");
     ctx.client.deepLink("app://promo", false);
-    ctx.client.pushOpen({ campaign: "eid" });
+    ctx.client.pushOpen({});
     ctx.client.backNav();
     ctx.client.error("boom");
     ctx.client.track("purchase", { amount: 100 });
@@ -213,13 +222,13 @@ describe("mobile event API", () => {
     expect(byType.payment_fail?.props).toEqual({ method: "visa" });
     expect(byType.flow_abandon?.props).toEqual({ flow: "checkout" });
     expect(byType.permission_denied?.props).toEqual({ permission: "camera" });
-    expect(byType.deep_link?.props).toEqual({ url: "app://promo", ok: false });
-    expect(byType.push_open?.props).toEqual({ campaign: "eid" });
+    expect(byType.deep_link?.props).toEqual({ ok: false });
+    expect(byType.push_open?.props).toEqual({});
     expect(byType.back_nav).toBeDefined();
-    expect(byType.error?.props).toEqual({ message: "boom" });
-    expect(byType.track?.props).toEqual({ amount: 100, name: "purchase" });
+    expect(byType.error?.props).toEqual({ code: "CLIENT_ERROR" });
+    expect(byType.track?.props).toEqual({ name: "purchase" });
     // every event is stamped with the current screen
-    expect(byType.otp_fail?.path).toBe("/Payment");
+    expect(byType.otp_fail?.path).toBe("/payment");
   });
 });
 
@@ -241,14 +250,14 @@ describe("queue", () => {
 // ── Action engine ────────────────────────────────────────────────────────────
 
 const manifestAction = {
-  id: "act-1",
+  id: "a1111111-1111-4111-8111-111111111111",
   type: "popup" as const,
   content: {
     ar: { title: "مساعدة", body: "هل تحتاج مساعدة؟", cta: { label: "واتساب", kind: "whatsapp" } },
     en: { title: "Help", body: "Need help?", cta: { label: "WhatsApp", kind: "whatsapp" } },
   },
   trigger: { kind: "pageview" },
-  urlContains: "Checkout",
+  urlContains: "checkout",
   frequencyCap: 2,
   goalEvent: "purchase",
 };
@@ -275,7 +284,10 @@ describe("action engine", () => {
     // impression emitted
     const events = await flushedEvents(ctx);
     const imp = events.find((e) => e.type === "action_impression");
-    expect(imp?.props).toMatchObject({ action_id: "act-1", variant: "A" });
+    expect(imp?.props).toMatchObject({
+      action_id: "a1111111-1111-4111-8111-111111111111",
+      variant: "A",
+    });
   });
 
   it("CTA activation routes WhatsApp through a real handoff and emits action_click", async () => {
@@ -359,7 +371,7 @@ describe("action engine", () => {
     expect(events.filter((e) => e.type === "action_impression")).toHaveLength(0);
   });
 
-  it("exit_intent actions show on app background", async () => {
+  it("does not present actions while the app is backgrounded", async () => {
     const exit = {
       ...manifestAction,
       id: "act-exit",
@@ -370,14 +382,14 @@ describe("action engine", () => {
     const ctx = await makeClient({ transport });
     ctx.client.screen("Home");
     ctx.client.appBackground();
-    expect(ctx.intents.filter((i) => i.intent === "action")).toHaveLength(1);
+    expect(ctx.intents.filter((i) => i.intent === "action")).toHaveLength(0);
   });
 });
 
 // ── Live Assist ──────────────────────────────────────────────────────────────
 
 const assistPayload = {
-  actionId: "assist-1",
+  actionId: "a2222222-2222-4222-8222-222222222222",
   mode: "answer" as const,
   confidence: 0.9,
   content: {
@@ -388,7 +400,7 @@ const assistPayload = {
     ar: { title: "كيف تستلم الرمز", body: "تأكد من رقمك" },
     en: { title: "Receiving your code", body: "Check your number" },
   },
-  articleId: "faq-9",
+  articleId: "a3333333-3333-4333-8333-333333333333",
 };
 
 describe("live assist", () => {
@@ -408,7 +420,10 @@ describe("live assist", () => {
     const events = sentBatches(ctx.transport).flatMap((b) => b.events);
     expect(events.some((e) => e.type === "assist_shown")).toBe(true);
     const helpful = events.find((e) => e.type === "assist_helpful");
-    expect(helpful?.props).toMatchObject({ action_id: "assist-1", article_id: "faq-9" });
+    expect(helpful?.props).toMatchObject({
+      action_id: "a2222222-2222-4222-8222-222222222222",
+      article_id: "a3333333-3333-4333-8333-333333333333",
+    });
 
     // the same assist payload arriving again is ignored (once per session)
     ctx.client.track("x");

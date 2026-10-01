@@ -1,4 +1,4 @@
-import type { RenderIntent, TrackiClient } from "@tracki/mobile-core";
+import type { RenderIntent, TrackiClient } from "@io7i/tracki-mobile-core";
 import {
   type ReactNode,
   createContext,
@@ -61,6 +61,9 @@ export function TrackiProvider({ options, bindings, children }: TrackiProviderPr
         }
         disposeRef.current = dispose;
         setClient(c);
+      },
+      () => {
+        /* Initialization failure leaves the host app usable. */
       },
     );
     return () => {

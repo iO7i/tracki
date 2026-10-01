@@ -6,7 +6,7 @@ import {
   type TrackiClient,
   type TrackiConfig,
   createTracki,
-} from "@tracki/mobile-core";
+} from "@io7i/tracki-mobile-core";
 
 /**
  * Platform seams, injected so the adapter is unit-testable without React
@@ -17,6 +17,8 @@ export interface NativeBindings {
   platform: "ios" | "android";
   osVersion: string;
   openUrl: (url: string) => void;
+  appState?: "active" | "background";
+  getInitialDeepLink?: () => Promise<string | null>;
   /** Subscribe to app active/background transitions; returns unsubscribe. */
   onAppStateChange?: (handler: (state: "active" | "background") => void) => () => void;
   /** Subscribe to hardware back presses (Android); returns unsubscribe. */
@@ -35,6 +37,13 @@ export interface ReactNativeTrackiOptions {
   transport?: TrackiConfig["transport"];
   clock?: TrackiConfig["clock"];
   idFactory?: TrackiConfig["idFactory"];
+  capturePolicy?: TrackiConfig["capturePolicy"];
+  storageNamespace?: string;
+  environment?: TrackiConfig["environment"];
+  scopeTag?: string;
+  build?: TrackiConfig["build"];
+  collectionBudget?: TrackiConfig["collectionBudget"];
+  sampleRandom?: TrackiConfig["sampleRandom"];
 }
 
 /**
@@ -64,16 +73,34 @@ export async function createTrackiClient(
     transport: options.transport,
     clock: options.clock,
     idFactory: options.idFactory,
+    capturePolicy: options.capturePolicy,
+    storageNamespace: options.storageNamespace,
+    environment: options.environment,
+    scopeTag: options.scopeTag,
+    build: options.build,
+    collectionBudget: options.collectionBudget,
+    sampleRandom: options.sampleRandom,
+    initialAppState: native.appState,
   });
 
   const subs: Array<() => void> = [];
+  let disposed = false;
   if (native.onAppStateChange) {
     subs.push(
       native.onAppStateChange((state) => {
+        if (disposed) return;
         if (state === "active") client.appForeground("warm");
         else if (state === "background") client.appBackground();
       }),
     );
+  }
+  if (native.getInitialDeepLink) {
+    void native
+      .getInitialDeepLink()
+      .then((url) => {
+        if (!disposed && url) client.deepLink(url, true);
+      })
+      .catch(() => {});
   }
   if (native.onBackPress) {
     subs.push(native.onBackPress(() => client.backNav()));
@@ -85,7 +112,10 @@ export async function createTrackiClient(
   return {
     client,
     dispose: () => {
+      if (disposed) return;
+      disposed = true;
       for (const off of subs) off();
+      client.dispose();
     },
   };
 }

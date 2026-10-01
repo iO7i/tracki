@@ -14,6 +14,44 @@
 
 export type MobilePlatform = "ios" | "android";
 
+export type NativeCorrelation = {
+  clientRequestId?: string;
+  requestId?: string;
+  operationId?: string;
+  jobId?: string;
+  stage?: "request" | "operation" | "job" | "outcome";
+  outcomeState?:
+    | "accepted"
+    | "pending"
+    | "running"
+    | "succeeded"
+    | "failed"
+    | "cancelled"
+    | "unknown";
+  outcomeSource?: "client" | "backend" | "job" | "readback";
+};
+export type MobileHealthSnapshot = {
+  reporterId: string;
+  revision: number;
+  observedAt: number;
+  observed: number;
+  sampledOut: number;
+  droppedCapacity: number;
+  droppedExpired: number;
+  rejected: number;
+  storageFailures: number;
+  unsupportedSchema: number;
+  accepted: number;
+  queueDepth: number;
+  queueBytes: number;
+  retryingCount: number;
+  lastAttemptAt?: number;
+  lastSuccessAt?: number;
+  oldestQueuedAt?: number;
+  lastResponseCategory: string;
+  routineSuccessSampleRate: number;
+};
+
 export interface DeviceInfo {
   platform: MobilePlatform;
   osVersion?: string;
@@ -23,6 +61,9 @@ export interface DeviceInfo {
 }
 
 export interface EventInput {
+  correlation?: NativeCorrelation;
+  sampleRate?: number;
+  fingerprint?: string;
   eventId?: string;
   type: string;
   ts: number;
@@ -30,9 +71,17 @@ export interface EventInput {
   url?: string;
   referrer?: string;
   props?: Record<string, unknown>;
+  traceContext?: { traceId: string; spanId: string; parentSpanId?: string };
 }
 
 export interface Batch {
+  protocol?: {
+    sdkVersion: string;
+    schemaVersion: number;
+    capabilities: string[];
+    requiredCapabilities?: string[];
+  };
+  health?: MobileHealthSnapshot;
   key: string;
   anonId: string;
   userId?: string;
@@ -40,6 +89,20 @@ export interface Batch {
   sentAt: number;
   device: DeviceInfo;
   events: EventInput[];
+  /** Opaque server-issued binding; never a client asserted account id. */
+  scopeTag?: string;
+  build?: BuildIdentity;
+}
+
+export interface CapturePolicy {
+  diagnostics: boolean;
+  activity: boolean;
+}
+
+export interface BuildIdentity {
+  buildId?: string;
+  runtimeVersion?: string;
+  updateId?: string;
 }
 
 // ── Injected platform adapters ───────────────────────────────────────────────
@@ -48,6 +111,7 @@ export interface Batch {
 export interface KeyValueStorage {
   get(key: string): Promise<string | null>;
   set(key: string, value: string): Promise<void>;
+  remove?(key: string): Promise<void>;
 }
 
 /** HTTP transport; default implementation uses global fetch. */
@@ -155,4 +219,15 @@ export interface TrackiConfig {
   clock?: Clock;
   /** Test seam: ids default to crypto.randomUUID-based. */
   idFactory?: (prefix: string) => string;
+  /** Collection stays off until the host has established its policy. */
+  capturePolicy?: CapturePolicy;
+  /** Isolates persisted identity, queue and caps between apps/environments. */
+  storageNamespace?: string;
+  environment?: "production" | "staging" | "development";
+  scopeTag?: string;
+  build?: BuildIdentity;
+  initialAppState?: "active" | "background";
+  collectionBudget?: Partial<import("./reliability").CollectionBudget>;
+  /** Deterministic sampling seam; normal clients use Math.random. */
+  sampleRandom?: () => number;
 }

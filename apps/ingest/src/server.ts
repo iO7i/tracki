@@ -277,7 +277,12 @@ export function buildServer(): FastifyInstance {
 
     // implementation: deliver any pending Live Assist for this session (pop-and-clear).
     const assist = await popAssist(ref.projectId, batch.sessionId).catch(() => null);
-    return reply.code(202).send(assist ? { ok: true, assist } : { ok: true });
+    // Acknowledge submitted stable client ids only AFTER the inbox transaction commits,
+    // including duplicate retries that were checked against their original payloads.
+    const acceptedClientIds = batch.events.flatMap((event) =>
+      event.eventId ? [event.eventId] : [],
+    );
+    return reply.code(202).send({ ok: true, acceptedClientIds, ...(assist ? { assist } : {}) });
   });
 
   const cco = ccoConfiguration();

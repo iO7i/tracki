@@ -1,5 +1,11 @@
 /** CCO v1 wire contract. Mirrored into both repositories; parity is tested. */
 import { createHash } from "node:crypto";
+import {
+  type NativeProtocol,
+  type OperationCorrelation,
+  nativeProtocol,
+  operationCorrelation,
+} from "./native-meta";
 
 export type Authority = "observed" | "derived" | "server-reported";
 export type Outcome = "observed" | "succeeded" | "failed" | "pending" | "unknown";
@@ -41,6 +47,10 @@ export type CcoEvent = {
   targetAppKey?: string | null;
   durationMs?: number | null;
   httpStatus?: number | null;
+  correlation?: OperationCorrelation | null;
+  nativeProtocol?: NativeProtocol;
+  sampleRate?: number | null;
+  fingerprint?: string | null;
 };
 export type CcoSnapshot = {
   version: 1;
@@ -268,6 +278,16 @@ export function event(value: unknown): CcoEvent {
     targetAppKey: nullableId(r.targetAppKey),
     durationMs: r.durationMs == null ? null : integer(r.durationMs, 0, 86400000),
     httpStatus: r.httpStatus == null ? null : integer(r.httpStatus, 100, 599),
+    ...(r.correlation == null
+      ? {}
+      : { correlation: operationCorrelation(r.correlation, authority !== "server-reported") }),
+    ...(r.nativeProtocol == null ? {} : { nativeProtocol: nativeProtocol(r.nativeProtocol) }),
+    ...(typeof r.sampleRate === "number" && r.sampleRate > 0 && r.sampleRate <= 1
+      ? { sampleRate: r.sampleRate }
+      : {}),
+    ...(typeof r.fingerprint === "string" && /^[a-f0-9]{16,64}$/.test(r.fingerprint)
+      ? { fingerprint: r.fingerprint }
+      : {}),
   };
 }
 export function canonical(value: unknown): string {

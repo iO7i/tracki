@@ -1,17 +1,24 @@
 {
-  "name": "@tracki/react-native",
-  "version": "0.0.1",
-  "private": true,
+  "name": "@io7i/tracki-react-native",
+  "version": "0.2.1",
+  "private": false,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
   },
   "scripts": {
     "check-types": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build": "node build.mjs",
+    "prepack": "npm run build",
+    "check-native-types": "tsc -p tsconfig.build.json --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
-    "@tracki/mobile-core": "workspace:*"
+    "@io7i/tracki-mobile-core": "workspace:0.2.1"
   },
   "peerDependencies": {
     "@react-native-async-storage/async-storage": ">=1.19.0",
@@ -20,8 +27,25 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "@types/react": "^18.3.0",
+    "@types/react": "19.2.16",
     "typescript": "^5.7.3",
-    "vitest": "^3.0.0"
+    "vitest": "^3.0.0",
+    "esbuild": "0.25.12",
+    "react-native": "0.85.3",
+    "react": "19.2.7",
+    "@react-native-async-storage/async-storage": "3.1.1",
+    "@tracki/shared": "workspace:*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iO7i/tracki.git",
+    "directory": "packages\\sdk-react-native"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
   }
 }

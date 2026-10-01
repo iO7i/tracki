@@ -12,7 +12,8 @@
     "./text": "./src/text.ts",
     "./pii": "./src/pii.ts",
     "./rage": "./src/rage.ts",
-    "./trace": "./src/trace.ts"
+    "./trace": "./src/trace.ts",
+    "./mobile-diagnostics": "./src/mobile-diagnostics.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit",
