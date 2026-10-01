@@ -31,7 +31,7 @@ function capturingTransport(): Transport & { posts: Array<{ url: string; body: u
     post: async (url, body) => {
       // Serialize exactly like a real HTTP transport would (drops undefineds).
       posts.push({ url, body: JSON.parse(JSON.stringify(body)) });
-      return { acceptedClientIds: (body as Batch).events?.map(event => event.eventId) ?? [] };
+      return { acceptedClientIds: (body as Batch).events?.map((event) => event.eventId) ?? [] };
     },
     get: async () => ({ actions: [] }),
   };
@@ -70,9 +70,9 @@ describe("conformance: journey-batch.json", () => {
     const { transport } = await runJourney();
     const batches = transport.posts.filter((p) => p.url.endsWith("/v1/events"));
     expect(batches).toHaveLength(2);
-    const envelopes = batches.map(value => value.body as Batch);
-    const events = envelopes.flatMap(batch => batch.events);
-    const ids = events.map(event => event.eventId);
+    const envelopes = batches.map((value) => value.body as Batch);
+    const events = envelopes.flatMap((batch) => batch.events);
+    const ids = events.map((event) => event.eventId);
     expect(new Set(ids).size).toBe(events.length);
     expect(envelopes[0]?.userId).toBeUndefined();
     expect(envelopes[1]?.userId).toBe("user_42");
@@ -86,11 +86,13 @@ describe("conformance: journey-batch.json", () => {
     // Explicit v2 privacy projection of the legacy cross-language fixture:
     // lowercase semantic routes, no referrers/model, creation-time identity.
     const expected = journey.expectedBatch.events.map((event: Record<string, unknown>) => ({
-      type: event.type, ts: event.ts,
-      path: (event.path as string).toLowerCase(), props: event.props ?? {},
+      type: event.type,
+      ts: event.ts,
+      path: (event.path as string).toLowerCase(),
+      props: event.props ?? {},
     }));
     expect(events.map(({ eventId, sampleRate, ...event }) => event)).toEqual(expected);
-    expect(events.every(event => event.sampleRate === 1)).toBe(true);
+    expect(events.every((event) => event.sampleRate === 1)).toBe(true);
   });
 });
 
@@ -119,7 +121,7 @@ describe("conformance: channel-requests.json", () => {
       device: journey.config.device,
       storage: memoryStorage(),
       capturePolicy: { diagnostics: true, activity: true },
-    transport,
+      transport,
       clock: () => t,
       idFactory: nextId,
       renderer: { show: (i) => intents.push(i) },

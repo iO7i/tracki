@@ -1,20 +1,24 @@
-import { afterEach, describe, expect, it } from "vitest";
 import Fastify from "fastify";
-import { nativeTestDb } from "./native-test-db";
-import { ensureCco, PostgresCcoStore } from "./store";
+import { afterEach, describe, expect, it } from "vitest";
+import { ensureInbox } from "../inbox";
+import type { CcoConfig } from "./config";
+import { event, sessionRef } from "./contract";
+import { nativeProtocol } from "./native-meta";
 import {
   acceptNativeMetadata,
   readNativeDiagnostics,
   setNativeIncidentStatus,
 } from "./native-store";
-import { nativeProtocol } from "./native-meta";
+import { nativeTestDb } from "./native-test-db";
 import { registerCcoRoutes } from "./routes";
-import { event, sessionRef } from "./contract";
-import { ensureInbox } from "../inbox";
-import type { CcoConfig } from "./config";
-const now = Date.now(),
-  anon = "12345678-1234-4234-8234-123456789abc",
-  session = "22345678-1234-4234-8234-123456789abc";
+import { PostgresCcoStore, ensureCco } from "./store";
+function requireValue<T>(value: T | null | undefined): T {
+  if (value == null) throw new Error("EXPECTED_VALUE_MISSING");
+  return value;
+}
+const now = Date.now();
+const anon = "12345678-1234-4234-8234-123456789abc";
+const session = "22345678-1234-4234-8234-123456789abc";
 const project = {
   orgId: "fixture-org",
   projectId: "fixture-native",
@@ -126,7 +130,7 @@ describe("real PostgreSQL native diagnostics", () => {
     ).rejects.toThrow("native_health_counter_regression");
     const rows = await f.sql`SELECT revision,body FROM cco_native_health`;
     expect(rows).toHaveLength(1);
-    expect(Number(rows[0]!.revision)).toBe(1);
+    expect(Number(requireValue(rows[0]).revision)).toBe(1);
     await expect(
       f.sql.begin((tx) =>
         acceptNativeMetadata(tx, { ...scope, accountId: "other-merchant" }, metadata),
@@ -147,16 +151,16 @@ describe("real PostgreSQL native diagnostics", () => {
     ).rejects.toThrow("native_session_identity_conflict");
   });
   it("persists status revisions, deduplicates events and reopens only after resolution", async () => {
-    const f = await fixture(),
-      store = new PostgresCcoStore(f.sql);
+    const f = await fixture();
+    const store = new PostgresCcoStore(f.sql);
     await store.append([observation("failure-one")]);
     await store.append([observation("failure-one")]);
     let read = await readNativeDiagnostics(f.sql, config, {
       since: now - 100000,
       now: now + 10000,
     });
-    expect(read.incidents[0]!.occurrenceCount).toBe(1);
-    const original = read.incidents[0]!;
+    expect(requireValue(read.incidents[0]).occurrenceCount).toBe(1);
+    const original = requireValue(read.incidents[0]);
     const resolved = await setNativeIncidentStatus(
       f.sql,
       config,
@@ -177,7 +181,7 @@ describe("real PostgreSQL native diagnostics", () => {
     ).rejects.toThrow("incident_revision_conflict");
     await store.append([observation("offline-old", now - 1000)]);
     read = await readNativeDiagnostics(f.sql, config, { since: now - 100000, now: now + 10000 });
-    expect(read.incidents[0]!.status).toBe("resolved");
+    expect(requireValue(read.incidents[0]).status).toBe("resolved");
     await store.append([observation("failure-later", now + 2000)]);
     read = await readNativeDiagnostics(f.sql, config, { since: now - 100000, now: now + 10000 });
     expect(read.incidents[0]).toMatchObject({
@@ -188,8 +192,8 @@ describe("real PostgreSQL native diagnostics", () => {
     expect(await f.sql`SELECT * FROM cco_native_incident_transitions`).toHaveLength(3);
   });
   it("serves authenticated health-only receipts and scoped read models over actual routes", async () => {
-    const f = await fixture(),
-      app = Fastify();
+    const f = await fixture();
+    const app = Fastify();
     closers.push(() => app.close());
     registerCcoRoutes(app, new PostgresCcoStore(f.sql), config, () => f.sql);
     const body = {
@@ -222,14 +226,14 @@ describe("real PostgreSQL native diagnostics", () => {
     const accepted = await app.inject({
       method: "POST",
       url: "/internal/cco/native-health",
-      headers: { authorization: "Bearer " + project.producerKey },
+      headers: { authorization: `Bearer ${project.producerKey}` },
       payload: body,
     });
     expect(accepted.statusCode, accepted.body).toBe(202);
     expect(accepted.json()).toEqual({ acceptedHealth: { reporterId: anon, revision: 1 } });
     const read = await app.inject({
-      url: "/internal/cco/native-diagnostics?accountId=" + scope.accountId,
-      headers: { authorization: "Bearer " + config.readKey },
+      url: `/internal/cco/native-diagnostics?accountId=${scope.accountId}`,
+      headers: { authorization: `Bearer ${config.readKey}` },
     });
     expect(read.statusCode, read.body).toBe(200);
     expect(read.json().health[0]).toMatchObject({
@@ -240,7 +244,7 @@ describe("real PostgreSQL native diagnostics", () => {
     expect(read.json().sessions).toHaveLength(1);
     const unrelated = await app.inject({
       url: "/internal/cco/native-diagnostics?accountId=other-merchant",
-      headers: { authorization: "Bearer " + config.readKey },
+      headers: { authorization: `Bearer ${config.readKey}` },
     });
     expect(unrelated.json().sessions).toHaveLength(0);
     expect(unrelated.json().health[0]).toMatchObject({ counters: null, status: "unavailable" });
@@ -295,17 +299,17 @@ describe("real PostgreSQL native diagnostics", () => {
       const first = await app.inject({
         method: "POST",
         url: "/internal/cco/native-batches",
-        headers: { authorization: "Bearer " + project.producerKey },
+        headers: { authorization: `Bearer ${project.producerKey}` },
         payload: { binding, authorizedAt: now, batch },
       });
       expect(first.statusCode, first.body).toBe(202);
       expect(first.json().acceptedClientIds).toEqual(["atomic-first"]);
-      const persistedBefore = await f.sql`SELECT event_id FROM telemetry_inbox`,
-        projectedBefore = await f.sql`SELECT event_id FROM cco_records`;
+      const persistedBefore = await f.sql`SELECT event_id FROM telemetry_inbox`;
+      const projectedBefore = await f.sql`SELECT event_id FROM cco_records`;
       const rejected = await app.inject({
         method: "POST",
         url: "/internal/cco/native-batches",
-        headers: { authorization: "Bearer " + project.producerKey },
+        headers: { authorization: `Bearer ${project.producerKey}` },
         payload: {
           binding,
           authorizedAt: now,

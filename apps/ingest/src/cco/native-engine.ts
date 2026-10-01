@@ -1,4 +1,5 @@
 import { digest } from "./contract";
+import type { NativeProtocol } from "./native-meta";
 import type {
   NativeDiagnosticEvent,
   NativeHealthRow,
@@ -6,7 +7,6 @@ import type {
   NativeReleaseComparison,
   NativeSession,
 } from "./native-read-model";
-import type { NativeProtocol } from "./native-meta";
 
 export function incidentIdentity(
   e: NativeDiagnosticEvent,
@@ -141,16 +141,22 @@ export function operationTimelines(events: NativeDiagnosticEvent[]): NativeOpera
   ];
   for (const e of events) {
     const t = tokens(e);
+    const firstToken = t[0];
+    if (!firstToken) continue;
     for (const next of t.slice(1)) {
-      const a = root(t[0]!),
-        b = root(next);
-      if (a !== b) parent.set(b, a < b ? a : b), parent.set(a, a < b ? a : b);
+      const a = root(firstToken);
+      const b = root(next);
+      if (a !== b) {
+        parent.set(b, a < b ? a : b);
+        parent.set(a, a < b ? a : b);
+      }
     }
   }
   for (const e of events) {
     const t = tokens(e);
-    if (!t.length) continue;
-    const k = root(t[0]!);
+    const firstToken = t[0];
+    if (!firstToken) continue;
+    const k = root(firstToken);
     groups.set(k, [...(groups.get(k) ?? []), e]);
   }
   return [...groups]
@@ -159,7 +165,12 @@ export function operationTimelines(events: NativeDiagnosticEvent[]): NativeOpera
         (a, b) => a.occurredAt - b.occurredAt || a.eventId.localeCompare(b.eventId),
       );
       const ids = (field: "clientRequestId" | "requestId" | "operationId" | "jobId") => [
-        ...new Set(sorted.flatMap((e) => (e.correlation?.[field] ? [e.correlation[field]!] : []))),
+        ...new Set(
+          sorted.flatMap((e) => {
+            const value = e.correlation?.[field];
+            return value ? [value] : [];
+          }),
+        ),
       ];
       const readback = [...sorted]
         .reverse()
@@ -171,7 +182,9 @@ export function operationTimelines(events: NativeDiagnosticEvent[]): NativeOpera
             ["succeeded", "failed", "cancelled"].includes(e.correlation.outcomeState ?? ""),
         );
       const outcome = readback ?? [...sorted].reverse().find((e) => e.correlation?.outcomeState);
-      const first = sorted[0]!;
+      const first = sorted[0];
+      const last = sorted.at(-1);
+      if (!first || !last) throw new Error("NATIVE_OPERATION_GROUP_EMPTY");
       return {
         correlationKey: digest(k),
         appKey: first.appKey,
@@ -183,7 +196,7 @@ export function operationTimelines(events: NativeDiagnosticEvent[]): NativeOpera
         jobIds: ids("jobId"),
         traceIds: [...new Set(sorted.flatMap((e) => (e.traceId ? [e.traceId] : [])))],
         firstSeen: first.occurredAt,
-        lastSeen: sorted.at(-1)!.occurredAt,
+        lastSeen: last.occurredAt,
         observedOutcome: outcome?.correlation?.outcomeState ?? "unknown",
         outcomeSource: outcome?.correlation?.outcomeSource ?? null,
         authoritativeOutcome: !!readback,
@@ -191,18 +204,16 @@ export function operationTimelines(events: NativeDiagnosticEvent[]): NativeOpera
           !readback ||
           !sorted.some((e) => e.source === "tracki.native") ||
           !sorted.some((e) => e.authority === "server-reported"),
-        timeline: sorted
-          .slice(-100)
-          .map((e) => ({
-            eventId: e.eventId,
-            occurredAt: e.occurredAt,
-            source: e.source,
-            operation: e.operation,
-            outcome: e.outcome,
-            stage: e.correlation?.stage ?? null,
-            httpStatus: e.httpStatus ?? null,
-            correlation: e.correlation ?? null,
-          })),
+        timeline: sorted.slice(-100).map((e) => ({
+          eventId: e.eventId,
+          occurredAt: e.occurredAt,
+          source: e.source,
+          operation: e.operation,
+          outcome: e.outcome,
+          stage: e.correlation?.stage ?? null,
+          httpStatus: e.httpStatus ?? null,
+          correlation: e.correlation ?? null,
+        })),
       };
     })
     .sort((a, b) => b.lastSeen - a.lastSeen)
@@ -236,8 +247,8 @@ export function releaseComparisons(
       const unique = new Map<string, NativeDiagnosticEvent>();
       for (const e of rows.filter((e) => e.release === release))
         unique.set(e.correlation?.clientRequestId ?? e.spanId ?? e.eventId, e);
-      const values = [...unique.values()],
-        failures = values.filter((e) => e.outcome === "failed").length;
+      const values = [...unique.values()];
+      const failures = values.filter((e) => e.outcome === "failed").length;
       const completeSampling = values.every(
         (e) => typeof e.sampleRate === "number" && e.sampleRate > 0 && e.sampleRate <= 1,
       );
@@ -253,15 +264,15 @@ export function releaseComparisons(
         failures,
         estimatedFailureRate: completeSampling && weighted ? weightedFailure / weighted : null,
         p95DurationMs: durations.length
-          ? durations[Math.max(0, Math.ceil(durations.length * 0.95) - 1)]!
+          ? (durations[Math.max(0, Math.ceil(durations.length * 0.95) - 1)] ?? null)
           : null,
       };
     };
-    const baseline = stats(baselineRelease),
-      candidate = stats(candidateRelease);
+    const baseline = stats(baselineRelease);
+    const candidate = stats(candidateRelease);
     const sampled = rows.some((e) => (e.sampleRate ?? 1) < 1);
-    let result: NativeReleaseComparison["result"] = "insufficient evidence",
-      reason = "minimum_30_comparable_terminal_requests_required";
+    let result: NativeReleaseComparison["result"] = "insufficient evidence";
+    let reason = "minimum_30_comparable_terminal_requests_required";
     if (
       !truncated &&
       baseline.observedRequests >= 30 &&
@@ -278,15 +289,16 @@ export function releaseComparisons(
       if (
         difference >= 0.05 &&
         candidate.estimatedFailureRate >= baseline.estimatedFailureRate * 1.5
-      )
-        (result = sampled ? "possible regression" : "material increase observed"),
-          (reason = "failure_rate_increase_observed");
-      else if (latency)
-        (result = "possible regression"),
-          (reason = "observed_latency_increase_not_sample_adjusted");
-      else
-        (result = "no material difference established"),
-          (reason = "configured_material_threshold_not_exceeded");
+      ) {
+        result = sampled ? "possible regression" : "material increase observed";
+        reason = "failure_rate_increase_observed";
+      } else if (latency) {
+        result = "possible regression";
+        reason = "observed_latency_increase_not_sample_adjusted";
+      } else {
+        result = "no material difference established";
+        reason = "configured_material_threshold_not_exceeded";
+      }
     } else if (truncated) reason = "bounded_read_truncated";
     else if (baseline.estimatedFailureRate == null || candidate.estimatedFailureRate == null)
       reason = "sampling_probability_missing";

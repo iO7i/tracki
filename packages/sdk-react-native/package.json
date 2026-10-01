@@ -38,10 +38,7 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/iO7i/tracki.git",

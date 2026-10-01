@@ -2,10 +2,10 @@ import type { StoredEvent } from "@tracki/shared";
 import type postgres from "postgres";
 import { configuration } from "./cco/config";
 import { CcoError, digest } from "./cco/contract";
+import { type NativeAcceptanceMetadata, acceptNativeMetadata } from "./cco/native-store";
 import { projectBehavior } from "./cco/projection";
 import { appendCco, ensureCco } from "./cco/store";
 import type { TrustedBrowserScope } from "./cco/trusted-browser";
-import { acceptNativeMetadata, type NativeAcceptanceMetadata } from "./cco/native-store";
 import { pg } from "./pg";
 
 function inboxPayloadDigest(value: unknown): string | null {

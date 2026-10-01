@@ -1,10 +1,14 @@
-import { isMobileDiagnostic, nativeBuild, safeNativeRoute } from "@tracki/shared/mobile-diagnostics";
-import { nativeProtocol } from "./reliability";
+import {
+  isMobileDiagnostic,
+  nativeBuild,
+  safeNativeRoute,
+} from "@tracki/shared/mobile-diagnostics";
 import { createActionEngine } from "./actions";
 import { createAssistHandler } from "./assist";
 import { createCtaRouter } from "./cta";
 import { Identity, defaultIdFactory, storageNamespace } from "./identity";
 import { EventQueue } from "./queue";
+import { nativeProtocol } from "./reliability";
 import { fetchTransport } from "./transport";
 import type { CapturePolicy, EventInput, TrackiConfig, Transport } from "./types";
 
@@ -27,8 +31,7 @@ export async function createTracki(config: TrackiConfig) {
   const transport = config.transport ?? fetchTransport();
   const newId = config.idFactory ?? defaultIdFactory;
   const locale = () => config.locale ?? "ar";
-  const namespace =
-    `${storageNamespace(config.key, config.endpoint, config.environment)}${config.storageNamespace ? `:${config.storageNamespace}` : ""}`;
+  const namespace = `${storageNamespace(config.key, config.endpoint, config.environment)}${config.storageNamespace ? `:${config.storageNamespace}` : ""}`;
   let policy: CapturePolicy = {
     diagnostics: config.capturePolicy?.diagnostics === true,
     activity: config.capturePolicy?.activity === true,
@@ -39,7 +42,13 @@ export async function createTracki(config: TrackiConfig) {
 
   const identity = new Identity(config.storage, now, newId, namespace);
   await identity.hydrate();
-  await identity.bindBuild(JSON.stringify({ appVersion: config.device.appVersion, build: nativeBuild(config.build), protocol: nativeProtocol }));
+  await identity.bindBuild(
+    JSON.stringify({
+      appVersion: config.device.appVersion,
+      build: nativeBuild(config.build),
+      protocol: nativeProtocol,
+    }),
+  );
 
   let currentPath = "/";
   let previousPath = "";
@@ -246,7 +255,8 @@ export async function createTracki(config: TrackiConfig) {
     queueHealth: () => queue.health(),
     refreshDeliveryHealth: () => queue.refreshHealth(),
     recordDeliveryResult: (error?: unknown) => queue.recordDeliveryResult(error),
-    onDeliveryHealth: (handler?: Parameters<EventQueue["setHealthHandler"]>[0]) => queue.setHealthHandler(handler),
+    onDeliveryHealth: (handler?: Parameters<EventQueue["setHealthHandler"]>[0]) =>
+      queue.setHealthHandler(handler),
 
     /** Changing collection policy purges events which no longer have permission. */
     async setCapturePolicy(next: CapturePolicy): Promise<void> {

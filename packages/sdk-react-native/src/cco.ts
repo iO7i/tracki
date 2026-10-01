@@ -1,5 +1,19 @@
-import { nativeProtocol, utf8Bytes, type Batch, type BuildIdentity, type KeyValueStorage, type NativeCorrelation, type TrackiClient, type Transport } from "@io7i/tracki-mobile-core";
-import { nativeOpaqueId, nativeResponseCategories, safeNativeRoute, sanitizeNativeCorrelation } from "@tracki/shared/mobile-diagnostics";
+import {
+  type Batch,
+  type BuildIdentity,
+  type KeyValueStorage,
+  type NativeCorrelation,
+  type TrackiClient,
+  type Transport,
+  nativeProtocol,
+  utf8Bytes,
+} from "@io7i/tracki-mobile-core";
+import {
+  nativeOpaqueId,
+  nativeResponseCategories,
+  safeNativeRoute,
+  sanitizeNativeCorrelation,
+} from "@tracki/shared/mobile-diagnostics";
 
 type CapturePolicy = { diagnostics: boolean; activity: boolean };
 type Grant = {
@@ -91,7 +105,11 @@ export async function createCcoNativeBridge(
   }
   const fetcher = options.fetch ?? globalThis.fetch;
   const now = options.clock ?? Date.now;
-  if ((options.timeoutMs !== undefined && !Number.isFinite(options.timeoutMs)) || (options.healthIntervalMs !== undefined && !Number.isFinite(options.healthIntervalMs))) throw new CcoNativeBridgeError("invalid-configuration");
+  if (
+    (options.timeoutMs !== undefined && !Number.isFinite(options.timeoutMs)) ||
+    (options.healthIntervalMs !== undefined && !Number.isFinite(options.healthIntervalMs))
+  )
+    throw new CcoNativeBridgeError("invalid-configuration");
   const timeout = Math.max(1000, Math.min(30000, options.timeoutMs ?? 10000));
   const healthInterval = Math.max(60000, Math.min(900000, options.healthIntervalMs ?? 300000));
   const storageKey = `${storagePart(options.namespace)}.cco.grants`;
@@ -229,7 +247,10 @@ export async function createCcoNativeBridge(
     throw new CcoNativeBridgeError("secure-storage-unavailable");
   }
 
-  const request = async (route: "bootstrap" | "events" | "health", body: unknown): Promise<unknown> => {
+  const request = async (
+    route: "bootstrap" | "events" | "health",
+    body: unknown,
+  ): Promise<unknown> => {
     ensureLive();
     const epoch = generation;
     let authorization: string | null;
@@ -262,7 +283,17 @@ export async function createCcoNativeBridge(
       if (!response.ok) {
         const rejection = response.headers.get("x-cco-rejection");
         if ([401, 403, 409, 410].includes(response.status)) await suspend();
-        throw new CcoNativeBridgeError(rejection && nativeResponseCategories.includes(rejection as typeof nativeResponseCategories[number]) && rejection !== "accepted" && rejection !== "none" ? rejection : "http-error", response.status);
+        throw new CcoNativeBridgeError(
+          rejection &&
+            nativeResponseCategories.includes(
+              rejection as (typeof nativeResponseCategories)[number],
+            ) &&
+            rejection !== "accepted" &&
+            rejection !== "none"
+            ? rejection
+            : "http-error",
+          response.status,
+        );
       }
       const contentLength = response.headers.get("content-length");
       if (contentLength && Number(contentLength) > MAX_RESPONSE_BYTES)
@@ -393,9 +424,15 @@ export async function createCcoNativeBridge(
     if (healthInFlight) return healthInFlight;
     const target = client;
     const epoch = generation;
-    if (!target || disposed || !connectedScope || !target.capturePolicy().diagnostics) return Promise.resolve();
+    if (!target || disposed || !connectedScope || !target.capturePolicy().diagnostics)
+      return Promise.resolve();
     healthInFlight = (async () => {
-      let grant = grants.find(g => g.anonId === target.anonId() && g.sessionId === target.sessionId() && g.scopeTag === connectedScope);
+      let grant = grants.find(
+        (g) =>
+          g.anonId === target.anonId() &&
+          g.sessionId === target.sessionId() &&
+          g.scopeTag === connectedScope,
+      );
       if (!grant) return; // Only connect/event delivery can acquire an identity grant.
       if (grant.expiresAt <= now() + 30000) {
         const previous = grant;
@@ -403,20 +440,42 @@ export async function createCcoNativeBridge(
       }
       if (epoch !== generation || disposed || client !== target) return;
       const health = await target.refreshDeliveryHealth();
-      const receipt = await request("health", { token: grant.token, anonId: target.anonId(), sessionId: target.sessionId(), scopeTag: connectedScope, protocol: nativeProtocol, build: options.build, health });
-      if (!object(receipt) || !object(receipt.acceptedHealth) || receipt.acceptedHealth.reporterId !== health.reporterId || receipt.acceptedHealth.revision !== health.revision) throw new CcoNativeBridgeError("invalid-acknowledgment");
-      if (epoch === generation && !disposed && client === target) await target.recordDeliveryResult();
-    })().catch(async error => {
-      if (epoch === generation && !disposed && client === target) await target.recordDeliveryResult(error);
-      throw error;
-    }).finally(() => { healthInFlight = undefined; });
+      const receipt = await request("health", {
+        token: grant.token,
+        anonId: target.anonId(),
+        sessionId: target.sessionId(),
+        scopeTag: connectedScope,
+        protocol: nativeProtocol,
+        build: options.build,
+        health,
+      });
+      if (
+        !object(receipt) ||
+        !object(receipt.acceptedHealth) ||
+        receipt.acceptedHealth.reporterId !== health.reporterId ||
+        receipt.acceptedHealth.revision !== health.revision
+      )
+        throw new CcoNativeBridgeError("invalid-acknowledgment");
+      if (epoch === generation && !disposed && client === target)
+        await target.recordDeliveryResult();
+    })()
+      .catch(async (error) => {
+        if (epoch === generation && !disposed && client === target)
+          await target.recordDeliveryResult(error);
+        throw error;
+      })
+      .finally(() => {
+        healthInFlight = undefined;
+      });
     return healthInFlight;
   };
   const scheduleHealth = (): void => {
     if (healthTimer || disposed || !client?.capturePolicy().diagnostics || !connectedScope) return;
     healthTimer = setTimeout(() => {
       healthTimer = undefined;
-      void reportHealth().catch(() => {}).finally(scheduleHealth);
+      void reportHealth()
+        .catch(() => {})
+        .finally(scheduleHealth);
     }, healthInterval);
     (healthTimer as { unref?: () => void }).unref?.();
   };
@@ -526,7 +585,9 @@ export async function createCcoNativeBridge(
     const path = safeNativeRoute(url.pathname);
     const suppliedRequestId = nativeOpaqueId(headers.get("x-client-request-id"));
     const clientRequestId = suppliedRequestId ?? traceContext?.spanId;
-    let correlation: NativeCorrelation | undefined = clientRequestId ? { clientRequestId, stage: "request", outcomeSource: "client", outcomeState: "unknown" } : undefined;
+    let correlation: NativeCorrelation | undefined = clientRequestId
+      ? { clientRequestId, stage: "request", outcomeSource: "client", outcomeState: "unknown" }
+      : undefined;
     const emit = (name: string, statusCode?: number): void => {
       if (epoch !== generation || disposed || client !== target) return;
       try {
@@ -549,13 +610,22 @@ export async function createCcoNativeBridge(
     emit("cco_request");
     let requestInit = init;
     if (traceContext || clientRequestId) {
-      if (traceContext && !existing) headers.set("traceparent", `00-${traceContext.traceId}-${traceContext.spanId}-01`);
+      if (traceContext && !existing)
+        headers.set("traceparent", `00-${traceContext.traceId}-${traceContext.spanId}-01`);
       if (clientRequestId) headers.set("x-client-request-id", clientRequestId);
       requestInit = { ...init, headers };
     }
     try {
       const response = await fetcher(input, requestInit);
-      correlation = sanitizeNativeCorrelation({ clientRequestId, requestId: response.headers.get("x-request-id"), operationId: response.headers.get("x-operation-id"), jobId: response.headers.get("x-job-id"), stage: "request", outcomeSource: "client", outcomeState: response.ok ? "accepted" : "failed" });
+      correlation = sanitizeNativeCorrelation({
+        clientRequestId,
+        requestId: response.headers.get("x-request-id"),
+        operationId: response.headers.get("x-operation-id"),
+        jobId: response.headers.get("x-job-id"),
+        stage: "request",
+        outcomeSource: "client",
+        outcomeState: response.ok ? "accepted" : "failed",
+      });
       emit("cco_response", response.status);
       return response;
     } catch (error) {

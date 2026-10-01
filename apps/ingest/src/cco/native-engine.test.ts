@@ -6,12 +6,16 @@ import {
   operationTimelines,
   releaseComparisons,
 } from "./native-engine";
-import { nativeHealth, nativeProtocol, operationCorrelation, deliveryFailure } from "./native-meta";
+import { deliveryFailure, nativeHealth, nativeProtocol, operationCorrelation } from "./native-meta";
 import type { NativeDiagnosticEvent, NativeSession } from "./native-read-model";
-const now = Date.now(),
-  id = "a".repeat(32),
-  op = "b".repeat(32),
-  job = "c".repeat(32);
+function requireValue<T>(value: T | null | undefined): T {
+  if (value == null) throw new Error("EXPECTED_VALUE_MISSING");
+  return value;
+}
+const now = Date.now();
+const id = "a".repeat(32);
+const op = "b".repeat(32);
+const job = "c".repeat(32);
 function observed(override: Partial<NativeDiagnosticEvent> = {}): NativeDiagnosticEvent {
   return event({
     version: 1,
@@ -127,15 +131,15 @@ describe("native diagnostics semantics", () => {
     ).not.toContain("secret");
   });
   it("groups deterministically and separates app/environment/release/route", () => {
-    const base = incidentIdentity(observed())!.incidentId;
-    expect(incidentIdentity(observed({ eventId: "other" }))!.incidentId).toBe(base);
+    const base = requireValue(incidentIdentity(observed())).incidentId;
+    expect(requireValue(incidentIdentity(observed({ eventId: "other" }))).incidentId).toBe(base);
     for (const change of [
       { release: "two" },
       { environment: "production" },
       { appKey: "cro" },
       { route: "/orders" },
     ])
-      expect(incidentIdentity(observed(change))!.incidentId).not.toBe(base);
+      expect(requireValue(incidentIdentity(observed(change))).incidentId).not.toBe(base);
   });
   it("never accepts a client readback as authoritative", () => {
     const client = observed({

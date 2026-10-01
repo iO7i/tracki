@@ -1,6 +1,5 @@
 import type postgres from "postgres";
 import type { CcoConfig, Project } from "./config";
-import { appendNativeIncident, ensureNativeDiagnostics } from "./native-store";
 import {
   CcoError,
   type CcoEvent,
@@ -14,6 +13,7 @@ import {
   object,
   sessionRef,
 } from "./contract";
+import { appendNativeIncident, ensureNativeDiagnostics } from "./native-store";
 export type Binding = {
   orgId: string;
   projectId: string;

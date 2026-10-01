@@ -1,10 +1,10 @@
 /** CCO v1 wire contract. Mirrored into both repositories; parity is tested. */
 import { createHash } from "node:crypto";
 import {
-  operationCorrelation,
-  nativeProtocol,
-  type OperationCorrelation,
   type NativeProtocol,
+  type OperationCorrelation,
+  nativeProtocol,
+  operationCorrelation,
 } from "./native-meta";
 
 export type Authority = "observed" | "derived" | "server-reported";

@@ -91,8 +91,16 @@ export class Identity {
    * envelopes retain their previous session and grant rather than relabeling. */
   async bindBuild(signature: string): Promise<void> {
     let previous: string | null = null;
-    try { previous = await this.storage.get(this.key("build_signature")); } catch { /* unavailable persistence must not affect the app */ }
-    if ((previous !== null && previous !== signature) || (previous === null && this.restoredSession)) this.rotateSession();
+    try {
+      previous = await this.storage.get(this.key("build_signature"));
+    } catch {
+      /* unavailable persistence must not affect the app */
+    }
+    if (
+      (previous !== null && previous !== signature) ||
+      (previous === null && this.restoredSession)
+    )
+      this.rotateSession();
     this.persist("build_signature", signature);
     await this.writes;
   }

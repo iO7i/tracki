@@ -10,7 +10,7 @@ export async function nativeTestDb(directory?: string): Promise<{ db: PGlite; sq
   }): postgres.Sql => {
     const sql = Object.assign(
       async (strings: TemplateStringsArray, ...values: unknown[]) => {
-        const text = strings.reduce((out, part, i) => out + (i ? "$" + i : "") + part, "");
+        const text = strings.reduce((out, part, i) => out + (i ? `$${i}` : "") + part, "");
         return (await query.query(text, values)).rows;
       },
       {

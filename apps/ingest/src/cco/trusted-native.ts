@@ -10,15 +10,15 @@ import { normalizeBatch } from "../normalize";
 import { pg } from "../pg";
 import type { Project } from "./config";
 import { CcoError, correlationId, id, integer, object } from "./contract";
-import type { TrustedBrowserScope } from "./trusted-browser";
 import {
+  type NativeHealth,
+  type NativeProtocol,
   nativeHealth,
   nativeProtocol,
   operationCorrelation,
-  type NativeProtocol,
-  type NativeHealth,
 } from "./native-meta";
-import { acceptNativeMetadata, type NativeAcceptanceMetadata } from "./native-store";
+import { type NativeAcceptanceMetadata, acceptNativeMetadata } from "./native-store";
+import type { TrustedBrowserScope } from "./trusted-browser";
 
 /** Only the app SERVER producer may send native batches. Native public keys never assert account identity. */
 export function parseTrustedNative(
@@ -174,18 +174,18 @@ export async function acceptTrustedNativeHealth(
   sql = pg(),
   now = Date.now(),
 ) {
-  const body = object(value),
-    binding = object(body.binding),
-    raw = object(body.report);
+  const body = object(value);
+  const binding = object(body.binding);
+  const raw = object(body.report);
   const authorizedAt = integer(body.authorizedAt, now - 23 * 3600000, now + 120000);
-  const validFrom = integer(binding.validFrom, authorizedAt - 24 * 3600000, authorizedAt + 120000),
-    expiresAt = integer(binding.expiresAt, authorizedAt, authorizedAt + 16 * 60000);
+  const validFrom = integer(binding.validFrom, authorizedAt - 24 * 3600000, authorizedAt + 120000);
+  const expiresAt = integer(binding.expiresAt, authorizedAt, authorizedAt + 16 * 60000);
   if (binding.actorKind !== "human" || !capturePolicy(binding.capturePolicy).diagnostics)
     throw new CcoError("native_capture_disabled", 403);
   if (binding.targetAppKey != null && binding.targetAppKey !== project.appKey)
     throw new CcoError("native_environment_mismatch", 403);
-  const anonId = correlationId(raw.anonId),
-    sessionId = correlationId(raw.sessionId);
+  const anonId = correlationId(raw.anonId);
+  const sessionId = correlationId(raw.sessionId);
   if (
     anonId !== binding.anonId ||
     sessionId !== binding.sessionId ||

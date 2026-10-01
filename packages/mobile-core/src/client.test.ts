@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createTracki, screenPath } from "./client";
-import { storageNamespace, SESSION_TIMEOUT_MS } from "./identity";
+import { SESSION_TIMEOUT_MS, storageNamespace } from "./identity";
 import type { Batch, KeyValueStorage, RenderIntent, TrackiConfig, Transport } from "./types";
 
 // ── Test doubles ─────────────────────────────────────────────────────────────
@@ -37,7 +37,12 @@ function fakeTransport(routes: Record<string, unknown> = {}): Transport & { call
     post: async (url, body) => {
       calls.push({ method: "POST", url, body });
       const result = match(url);
-      return url.includes("/v1/events") ? { ...(result as object), acceptedClientIds: (body as Batch).events.map(event => event.eventId) } : result;
+      return url.includes("/v1/events")
+        ? {
+            ...(result as object),
+            acceptedClientIds: (body as Batch).events.map((event) => event.eventId),
+          }
+        : result;
     },
     get: async (url) => {
       calls.push({ method: "GET", url });
@@ -171,10 +176,12 @@ describe("identity", () => {
     const ctx = await makeClient();
     ctx.client.identify("user_42");
     await ctx.client.flush();
-    const batch = sentBatches(ctx.transport).find(batch => batch.userId === "user_42");
+    const batch = sentBatches(ctx.transport).find((batch) => batch.userId === "user_42");
     expect(batch?.userId).toBe("user_42");
     expect(batch?.events.some((e) => e.type === "identify")).toBe(true);
-    expect(ctx.storage.data.get(`${storageNamespace("pk_test", "https://ingest.test")}:user`)).toBe("user_42");
+    expect(ctx.storage.data.get(`${storageNamespace("pk_test", "https://ingest.test")}:user`)).toBe(
+      "user_42",
+    );
   });
 });
 
@@ -277,7 +284,10 @@ describe("action engine", () => {
     // impression emitted
     const events = await flushedEvents(ctx);
     const imp = events.find((e) => e.type === "action_impression");
-    expect(imp?.props).toMatchObject({ action_id: "a1111111-1111-4111-8111-111111111111", variant: "A" });
+    expect(imp?.props).toMatchObject({
+      action_id: "a1111111-1111-4111-8111-111111111111",
+      variant: "A",
+    });
   });
 
   it("CTA activation routes WhatsApp through a real handoff and emits action_click", async () => {
@@ -410,7 +420,10 @@ describe("live assist", () => {
     const events = sentBatches(ctx.transport).flatMap((b) => b.events);
     expect(events.some((e) => e.type === "assist_shown")).toBe(true);
     const helpful = events.find((e) => e.type === "assist_helpful");
-    expect(helpful?.props).toMatchObject({ action_id: "a2222222-2222-4222-8222-222222222222", article_id: "a3333333-3333-4333-8333-333333333333" });
+    expect(helpful?.props).toMatchObject({
+      action_id: "a2222222-2222-4222-8222-222222222222",
+      article_id: "a3333333-3333-4333-8333-333333333333",
+    });
 
     // the same assist payload arriving again is ignored (once per session)
     ctx.client.track("x");

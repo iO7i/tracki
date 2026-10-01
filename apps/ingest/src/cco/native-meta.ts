@@ -1,5 +1,5 @@
+import { nativeResponseCategories, sanitizeNativeHealth } from "@tracki/shared/mobile-diagnostics";
 import { CcoError, integer, object as record } from "./contract";
-import { sanitizeNativeHealth, nativeResponseCategories } from "@tracki/shared/mobile-diagnostics";
 export const NATIVE_CAPABILITIES = [
   "capture-health-v1",
   "operation-correlation-v1",
@@ -43,8 +43,8 @@ export function nativeProtocol(value: unknown): NativeProtocol {
       throw new CcoError("invalid_native_capabilities", 422);
     return [...new Set(v as string[])].sort();
   };
-  const capabilities = list(raw.capabilities),
-    requiredCapabilities = list(raw.requiredCapabilities);
+  const capabilities = list(raw.capabilities);
+  const requiredCapabilities = list(raw.requiredCapabilities);
   if (
     requiredCapabilities.some(
       (c) => !(NATIVE_CAPABILITIES as readonly string[]).includes(c) || !capabilities.includes(c),
@@ -89,9 +89,8 @@ export const DELIVERY_CATEGORIES = nativeResponseCategories;
 export function nativeHealth(value: unknown, now: number): NativeHealth {
   const sanitized = sanitizeNativeHealth(value);
   if (!sanitized) throw new CcoError("invalid_native_health");
-  value = sanitized;
-  const raw = record(value),
-    result: Record<string, unknown> = {};
+  const raw = record(sanitized);
+  const result: Record<string, unknown> = {};
   result.reporterId = raw.reporterId;
   result.revision = integer(raw.revision, 0, Number.MAX_SAFE_INTEGER);
   result.observedAt = integer(raw.observedAt, now - 23 * 3600000, now + 120000);
@@ -166,8 +165,8 @@ export type OperationCorrelation = {
 };
 export function operationCorrelation(value: unknown, client = false): OperationCorrelation | null {
   if (value == null) return null;
-  const raw = record(value),
-    out: Record<string, string> = {};
+  const raw = record(value);
+  const out: Record<string, string> = {};
   const opaque =
     /^(?:(?:op_|job_|req_)?(?:[a-f0-9]{16,64}|[0-9A-HJKMNP-TV-Z]{26}|[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}))$/i;
   for (const key of ["clientRequestId", "requestId", "operationId", "jobId"])

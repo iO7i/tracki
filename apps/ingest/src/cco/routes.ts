@@ -1,15 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import type postgres from "postgres";
-import { pg } from "../pg";
 import { acceptEvents } from "../inbox";
+import { pg } from "../pg";
 import { type CcoConfig, constantEqual } from "./config";
 import { CcoError, event, id, integer, object } from "./contract";
+import { nativeRejectionCategory } from "./native-meta";
+import { readNativeDiagnostics, setNativeIncidentStatus } from "./native-store";
 import { readRecordings } from "./recordings";
 import { type CcoStore, parseBinding } from "./store";
 import { acceptTrustedBrowser } from "./trusted-browser";
 import { acceptTrustedNative, acceptTrustedNativeHealth } from "./trusted-native";
-import { readNativeDiagnostics, setNativeIncidentStatus } from "./native-store";
-import { nativeRejectionCategory } from "./native-meta";
 export function registerCcoRoutes(
   app: FastifyInstance,
   store: CcoStore,
@@ -27,8 +27,8 @@ export function registerCcoRoutes(
     if (!constantEqual(key(req.headers.authorization), config.readKey))
       return reply.code(403).send({ error: "forbidden" });
     try {
-      const q = object(req.query),
-        now = Date.now();
+      const q = object(req.query);
+      const now = Date.now();
       return await readNativeDiagnostics(sqlProvider(), config, {
         now,
         since:
@@ -50,8 +50,8 @@ export function registerCcoRoutes(
     if (!constantEqual(key(req.headers.authorization), config.readKey))
       return reply.code(403).send({ error: "forbidden" });
     try {
-      const body = object(req.body),
-        params = object(req.params);
+      const body = object(req.body);
+      const params = object(req.params);
       if (!["open", "acknowledged", "resolved"].includes(String(body.status)))
         throw new CcoError("invalid_incident_status");
       return await setNativeIncidentStatus(

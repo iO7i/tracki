@@ -1,11 +1,11 @@
-/** LOCAL SYNTHETIC FIXTURE. Never production telemetry or production authentication. */
-import Fastify from "fastify";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
+/** LOCAL SYNTHETIC FIXTURE. Never production telemetry or production authentication. */
+import Fastify from "fastify";
 import { nativeTestDb } from "../src/cco/native-test-db";
-import { ensureCco, PostgresCcoStore } from "../src/cco/store";
-import { ensureInbox } from "../src/inbox";
 import { registerCcoRoutes } from "../src/cco/routes";
+import { PostgresCcoStore, ensureCco } from "../src/cco/store";
+import { ensureInbox } from "../src/inbox";
 const project = {
   orgId: "fixture-org",
   projectId: "fixture-native",
@@ -22,9 +22,9 @@ await ensureCco(sql);
 await ensureInbox(sql);
 const app = Fastify({ logger: false });
 registerCcoRoutes(app, new PostgresCcoStore(sql), config, () => sql);
-const now = Date.now(),
-  anon = randomUUID(),
-  scopeTag = "f".repeat(64);
+const now = Date.now();
+const anon = randomUUID();
+const scopeTag = "f".repeat(64);
 let session = randomUUID();
 const protocol = {
   sdkVersion: "0.2.0",
@@ -48,7 +48,7 @@ const binding = {
   validFrom: now - 60000,
   expiresAt: now + 600000,
 };
-const headers = { authorization: "Bearer " + project.producerKey };
+const headers = { authorization: `Bearer ${project.producerKey}` };
 const health = {
   reporterId: randomUUID(),
   revision: 1,
@@ -69,10 +69,10 @@ const health = {
   lastSuccessAt: now,
   lastResponseCategory: "accepted",
 };
-const requestId = "a".repeat(32),
-  operationId = "b".repeat(32),
-  jobId = "c".repeat(32),
-  timeoutOp = "d".repeat(32);
+const requestId = "a".repeat(32);
+const operationId = "b".repeat(32);
+const jobId = "c".repeat(32);
+const timeoutOp = "d".repeat(32);
 for (const release of ["fixture-baseline", "fixture-candidate"]) {
   session = randomUUID();
   binding.sessionId = session;
@@ -113,10 +113,7 @@ for (const release of ["fixture-baseline", "fixture-candidate"]) {
   });
   if (result.statusCode !== 202)
     throw new Error(
-      "FIXTURE_NATIVE_INGEST_FAILED_" +
-        result.statusCode +
-        "_" +
-        String(result.json().error).replace(/[^A-Za-z_]/g, ""),
+      `FIXTURE_NATIVE_INGEST_FAILED_${result.statusCode}_${String(result.json().error).replace(/[^A-Za-z_]/g, "")}`,
     );
 }
 const timeout = await app.inject({
@@ -154,7 +151,7 @@ const timeout = await app.inject({
   },
 });
 if (timeout.statusCode !== 202)
-  throw new Error("FIXTURE_TIMEOUT_INGEST_FAILED_" + timeout.statusCode);
+  throw new Error(`FIXTURE_TIMEOUT_INGEST_FAILED_${timeout.statusCode}`);
 const report = await app.inject({
   method: "POST",
   url: "/internal/cco/native-health",
@@ -172,7 +169,7 @@ const report = await app.inject({
     },
   },
 });
-if (report.statusCode !== 202) throw new Error("FIXTURE_HEALTH_INGEST_FAILED_" + report.statusCode);
+if (report.statusCode !== 202) throw new Error(`FIXTURE_HEALTH_INGEST_FAILED_${report.statusCode}`);
 const backend = await app.inject({
   method: "POST",
   url: "/internal/cco/events",
@@ -225,15 +222,15 @@ const backend = await app.inject({
   },
 });
 if (backend.statusCode !== 202)
-  throw new Error("FIXTURE_BACKEND_INGEST_FAILED_" + backend.statusCode);
+  throw new Error(`FIXTURE_BACKEND_INGEST_FAILED_${backend.statusCode}`);
 await mkdir("D:/Vertex-CCO-native-20261001/evidence", { recursive: true });
 await writeFile(
   "D:/Vertex-CCO-native-20261001/evidence/native-local-collector.env",
   `TRACKI_CCO_URL=http://127.0.0.1:5490\nTRACKI_CCO_READ_KEY=${config.readKey}\n`,
 );
 await app.listen({ host: "127.0.0.1", port: 5490 });
-console.log(
-  "Synthetic local collector ready at 127.0.0.1:5490; credentials saved to local evidence env file.",
+process.stdout.write(
+  "Synthetic local collector ready at 127.0.0.1:5490; credentials saved to local evidence env file.\n",
 );
 for (const signal of ["SIGINT", "SIGTERM"] as const)
   process.on(signal, () => {

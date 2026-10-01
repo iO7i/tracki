@@ -1,6 +1,17 @@
-import { nativeBuild, sanitizeMobileEvent, sanitizeNativeHealth } from "@tracki/shared/mobile-diagnostics";
-import { collectionBudget, deliveryCategory, isPermanentCategory, nativeProtocol, utf8Bytes, type CollectionBudget } from "./reliability";
+import {
+  nativeBuild,
+  sanitizeMobileEvent,
+  sanitizeNativeHealth,
+} from "@tracki/shared/mobile-diagnostics";
 import { type Identity, defaultIdFactory } from "./identity";
+import {
+  type CollectionBudget,
+  collectionBudget,
+  deliveryCategory,
+  isPermanentCategory,
+  nativeProtocol,
+  utf8Bytes,
+} from "./reliability";
 import type {
   Batch,
   BuildIdentity,
@@ -8,8 +19,8 @@ import type {
   DeviceInfo,
   EventInput,
   KeyValueStorage,
-  Transport,
   MobileHealthSnapshot,
+  Transport,
 } from "./types";
 
 export const FLUSH_SIZE = 10;
@@ -65,19 +76,39 @@ export class EventQueue {
   private persistHealthSoon(): void {
     if (this.healthWriteTimer || this.disposed) return;
     this.healthWriteTimer = setTimeout(() => {
-      this.healthWriteTimer = null; void this.persist().catch(() => {});
+      this.healthWriteTimer = null;
+      void this.persist().catch(() => {});
     }, 1000);
     (this.healthWriteTimer as { unref?: () => void }).unref?.();
   }
-  private cancelHealthWrite(): void { if (this.healthWriteTimer) clearTimeout(this.healthWriteTimer); this.healthWriteTimer = null; }
+  private cancelHealthWrite(): void {
+    if (this.healthWriteTimer) clearTimeout(this.healthWriteTimer);
+    this.healthWriteTimer = null;
+  }
 
   private newStats(): MobileHealthSnapshot {
     const crypto = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
-    const reporterId = crypto?.randomUUID?.() ?? Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
-    return { reporterId, revision: 1, observedAt: this.now(), observed: 0, sampledOut: 0,
-      droppedCapacity: 0, droppedExpired: 0, rejected: 0, storageFailures: 0, unsupportedSchema: 0,
-      accepted: 0, queueDepth: 0, queueBytes: 0, retryingCount: 0, lastResponseCategory: "none",
-      routineSuccessSampleRate: this.budget.routineSuccessSampleRate };
+    const reporterId =
+      crypto?.randomUUID?.() ??
+      Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+    return {
+      reporterId,
+      revision: 1,
+      observedAt: this.now(),
+      observed: 0,
+      sampledOut: 0,
+      droppedCapacity: 0,
+      droppedExpired: 0,
+      rejected: 0,
+      storageFailures: 0,
+      unsupportedSchema: 0,
+      accepted: 0,
+      queueDepth: 0,
+      queueBytes: 0,
+      retryingCount: 0,
+      lastResponseCategory: "none",
+      routineSuccessSampleRate: this.budget.routineSuccessSampleRate,
+    };
   }
   private changed(): void {
     this.stats.revision = Math.min(1e9, this.stats.revision + 1);
@@ -85,20 +116,45 @@ export class EventQueue {
     this.stats.queueDepth = this.size;
     this.stats.queueBytes = utf8Bytes(JSON.stringify(this.buffer));
     this.stats.retryingCount = this.failures ? this.size : 0;
-    const oldest = this.buffer.flatMap(item => item.batch.events.map(event => event.ts));
+    const oldest = this.buffer.flatMap((item) => item.batch.events.map((event) => event.ts));
     this.stats.oldestQueuedAt = oldest.length ? Math.min(...oldest) : undefined;
-    for (const key of ["observed", "sampledOut", "droppedCapacity", "droppedExpired", "rejected", "storageFailures", "unsupportedSchema", "accepted"] as const) this.stats[key] = Math.min(1e9, this.stats[key]);
+    for (const key of [
+      "observed",
+      "sampledOut",
+      "droppedCapacity",
+      "droppedExpired",
+      "rejected",
+      "storageFailures",
+      "unsupportedSchema",
+      "accepted",
+    ] as const)
+      this.stats[key] = Math.min(1e9, this.stats[key]);
   }
-  setHealthHandler(handler?: (health: MobileHealthSnapshot) => void): void { this.healthHandler = handler; }
-  async refreshHealth(): Promise<MobileHealthSnapshot> { this.changed(); await this.persist(); return { ...this.stats }; }
+  setHealthHandler(handler?: (health: MobileHealthSnapshot) => void): void {
+    this.healthHandler = handler;
+  }
+  async refreshHealth(): Promise<MobileHealthSnapshot> {
+    this.changed();
+    await this.persist();
+    return { ...this.stats };
+  }
   async recordDeliveryResult(error?: unknown): Promise<void> {
     this.stats.lastAttemptAt = this.now();
     this.stats.lastResponseCategory = error === undefined ? "accepted" : deliveryCategory(error);
     if (error === undefined) this.stats.lastSuccessAt = this.now();
-    this.changed(); await this.persist().catch(() => {});
+    this.changed();
+    await this.persist().catch(() => {});
   }
-  healthSnapshot(): MobileHealthSnapshot { return { ...this.stats }; }
-  private notifyHealth(): void { try { this.healthHandler?.(this.healthSnapshot()); } catch { /* Host observer cannot affect delivery. */ } }
+  healthSnapshot(): MobileHealthSnapshot {
+    return { ...this.stats };
+  }
+  private notifyHealth(): void {
+    try {
+      this.healthHandler?.(this.healthSnapshot());
+    } catch {
+      /* Host observer cannot affect delivery. */
+    }
+  }
 
   constructor(
     private readonly key: string,
@@ -121,14 +177,22 @@ export class EventQueue {
       raw = await this.options.storage.get(this.storageKey);
     } catch {
       this.persistenceHealthy = false;
-      this.stats.storageFailures++; this.stats.lastResponseCategory = "local_storage_failure"; this.changed();
+      this.stats.storageFailures++;
+      this.stats.lastResponseCategory = "local_storage_failure";
+      this.changed();
       return; // Collection fails closed; app initialization remains available.
     }
     try {
       const stored: unknown = raw && utf8Bytes(raw) <= MAX_QUEUE_BYTES * 3 ? JSON.parse(raw) : [];
-      const document = stored && typeof stored === "object" && !Array.isArray(stored) ? stored as Record<string, unknown> : null;
+      const document =
+        stored && typeof stored === "object" && !Array.isArray(stored)
+          ? (stored as Record<string, unknown>)
+          : null;
       const restored = sanitizeNativeHealth(document?.health);
-      if (restored) { this.stats = restored; this.healthScope = typeof document?.scopeTag === "string" ? document.scopeTag : undefined; }
+      if (restored) {
+        this.stats = restored;
+        this.healthScope = typeof document?.scopeTag === "string" ? document.scopeTag : undefined;
+      }
       const parsed: unknown = Array.isArray(stored) ? stored : document?.buffer;
       if (Array.isArray(parsed)) {
         for (const value of parsed) {
@@ -147,8 +211,19 @@ export class EventQueue {
             !["ios", "android"].includes(b.device.platform)
           )
             continue;
-          if (b.protocol && (![1, 2].includes(b.protocol.schemaVersion) || typeof b.protocol.sdkVersion !== "string" || !/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/.test(b.protocol.sdkVersion) || !Array.isArray(b.protocol.capabilities) || b.protocol.capabilities.length > 16 || (b.protocol.requiredCapabilities !== undefined && (!Array.isArray(b.protocol.requiredCapabilities) || b.protocol.requiredCapabilities.length > 16)))) {
-            this.stats.unsupportedSchema += b.events.length; this.stats.rejected += b.events.length;
+          if (
+            b.protocol &&
+            (![1, 2].includes(b.protocol.schemaVersion) ||
+              typeof b.protocol.sdkVersion !== "string" ||
+              !/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/.test(b.protocol.sdkVersion) ||
+              !Array.isArray(b.protocol.capabilities) ||
+              b.protocol.capabilities.length > 16 ||
+              (b.protocol.requiredCapabilities !== undefined &&
+                (!Array.isArray(b.protocol.requiredCapabilities) ||
+                  b.protocol.requiredCapabilities.length > 16)))
+          ) {
+            this.stats.unsupportedSchema += b.events.length;
+            this.stats.rejected += b.events.length;
             this.stats.lastResponseCategory = "unsupported_schema";
             continue;
           }
@@ -171,7 +246,20 @@ export class EventQueue {
                 build: nativeBuild(b.build),
                 // Retain the protocol of the binary which created the evidence.
                 protocol: b.protocol
-                  ? { sdkVersion: b.protocol.sdkVersion, schemaVersion: b.protocol.schemaVersion, capabilities: b.protocol.capabilities.filter(value => typeof value === "string" && /^[a-z0-9-]{1,64}$/.test(value)).slice(0, 16), requiredCapabilities: b.protocol.requiredCapabilities?.filter(value => typeof value === "string" && /^[a-z0-9-]{1,64}$/.test(value)).slice(0, 16) }
+                  ? {
+                      sdkVersion: b.protocol.sdkVersion,
+                      schemaVersion: b.protocol.schemaVersion,
+                      capabilities: b.protocol.capabilities
+                        .filter(
+                          (value) => typeof value === "string" && /^[a-z0-9-]{1,64}$/.test(value),
+                        )
+                        .slice(0, 16),
+                      requiredCapabilities: b.protocol.requiredCapabilities
+                        ?.filter(
+                          (value) => typeof value === "string" && /^[a-z0-9-]{1,64}$/.test(value),
+                        )
+                        .slice(0, 16),
+                    }
                   : undefined,
                 events,
               },
@@ -181,7 +269,9 @@ export class EventQueue {
         }
       }
     } catch {
-      this.stats.storageFailures++; this.stats.lastResponseCategory = "local_storage_failure"; this.changed();
+      this.stats.storageFailures++;
+      this.stats.lastResponseCategory = "local_storage_failure";
+      this.changed();
     }
     this.prune();
     await this.persist().catch(() => {});
@@ -213,16 +303,28 @@ export class EventQueue {
     const safe = sanitizeMobileEvent(event);
     if (safe && !this.allowed(safe)) return;
     this.stats.observed++;
-    if (
-      !safe ||
-      safe.ts < this.now() - this.budget.eventTtlMs ||
-      safe.ts > this.now() + 60000
-    )
-      { this.stats.rejected++; this.changed(); this.persistHealthSoon(); this.notifyHealth(); return; }
-    const routine = safe.type === "track" && safe.props?.name === "cco_response" && typeof safe.props.statusCode === "number" && safe.props.statusCode < 400 && safe.props.ok !== false && (typeof safe.props.durationMs !== "number" || safe.props.durationMs < this.budget.unusualLatencyMs);
+    if (!safe || safe.ts < this.now() - this.budget.eventTtlMs || safe.ts > this.now() + 60000) {
+      this.stats.rejected++;
+      this.changed();
+      this.persistHealthSoon();
+      this.notifyHealth();
+      return;
+    }
+    const routine =
+      safe.type === "track" &&
+      safe.props?.name === "cco_response" &&
+      typeof safe.props.statusCode === "number" &&
+      safe.props.statusCode < 400 &&
+      safe.props.ok !== false &&
+      (typeof safe.props.durationMs !== "number" ||
+        safe.props.durationMs < this.budget.unusualLatencyMs);
     safe.sampleRate = routine ? this.budget.routineSuccessSampleRate : 1;
     if (routine && (this.options.random ?? Math.random)() >= this.budget.routineSuccessSampleRate) {
-      this.stats.sampledOut++; this.changed(); this.persistHealthSoon(); this.notifyHealth(); return;
+      this.stats.sampledOut++;
+      this.changed();
+      this.persistHealthSoon();
+      this.notifyHealth();
+      return;
     }
     this.identity.touchSession();
     const anonId = this.identity.getAnonId();
@@ -235,7 +337,8 @@ export class EventQueue {
       !tail ||
       tail.sealed ||
       tail.batch.events.length >= this.budget.batchSize ||
-      this.batchBytes({ ...tail.batch, events: [...tail.batch.events, identified] }) > this.budget.batchByteLimit ||
+      this.batchBytes({ ...tail.batch, events: [...tail.batch.events, identified] }) >
+        this.budget.batchByteLimit ||
       tail.batch.anonId !== anonId ||
       tail.batch.userId !== userId ||
       tail.batch.sessionId !== sessionId ||
@@ -260,18 +363,27 @@ export class EventQueue {
     }
     tail.batch.events.push(identified);
     if (this.batchBytes(tail.batch) > this.budget.batchByteLimit) {
-      tail.batch.events.pop(); this.stats.rejected++; this.stats.lastResponseCategory = "payload_too_large";
+      tail.batch.events.pop();
+      this.stats.rejected++;
+      this.stats.lastResponseCategory = "payload_too_large";
     }
     this.healthScope = scopeTag;
     this.prune();
     this.changed();
-    void this.persist().then(() => this.notifyHealth()).catch(() => {});
+    void this.persist()
+      .then(() => this.notifyHealth())
+      .catch(() => {});
     if (this.size >= FLUSH_SIZE && this.failures === 0) void this.flush();
     else this.schedule(this.retryDelay());
   }
 
   private retryDelay(): number {
-    return Math.min(5 * 60 * 1000, FLUSH_INTERVAL_MS * 2 ** Math.min(this.failures, 6) * (this.failures ? 0.75 + (this.options.random ?? Math.random)() * 0.5 : 1));
+    return Math.min(
+      5 * 60 * 1000,
+      FLUSH_INTERVAL_MS *
+        2 ** Math.min(this.failures, 6) *
+        (this.failures ? 0.75 + (this.options.random ?? Math.random)() * 0.5 : 1),
+    );
   }
   private schedule(delay: number): void {
     if (this.disposed || this.timer || !this.deliverable()) return;
@@ -295,14 +407,36 @@ export class EventQueue {
       item.batch.events = item.batch.events.filter((event) => event.ts >= cutoff);
     this.buffer = this.buffer.filter((item) => item.batch.events.length > 0);
     this.stats.droppedExpired += before - this.size;
-    while (this.size > this.budget.maxQueuedEvents || utf8Bytes(JSON.stringify(this.buffer)) > this.budget.maxQueuedBytes) {
+    while (
+      this.size > this.budget.maxQueuedEvents ||
+      utf8Bytes(JSON.stringify(this.buffer)) > this.budget.maxQueuedBytes
+    ) {
       // Preserve failures before routine successful request evidence, even when
       // an outage fills the outbox. Never modify an already submitted payload.
-      const routine = this.buffer.find(item => item.batch.events.some(event => event.type === "track" && event.props?.name === "cco_response" && typeof event.props.statusCode === "number" && event.props.statusCode < 400 && (typeof event.props.durationMs !== "number" || event.props.durationMs < this.budget.unusualLatencyMs)));
+      const routine = this.buffer.find((item) =>
+        item.batch.events.some(
+          (event) =>
+            event.type === "track" &&
+            event.props?.name === "cco_response" &&
+            typeof event.props.statusCode === "number" &&
+            event.props.statusCode < 400 &&
+            (typeof event.props.durationMs !== "number" ||
+              event.props.durationMs < this.budget.unusualLatencyMs),
+        ),
+      );
       if (routine) {
-        const index = routine.batch.events.findIndex(event => event.type === "track" && event.props?.name === "cco_response" && typeof event.props.statusCode === "number" && event.props.statusCode < 400 && (typeof event.props.durationMs !== "number" || event.props.durationMs < this.budget.unusualLatencyMs));
-        routine.batch.events.splice(index, 1); this.stats.droppedCapacity++;
-        this.buffer = this.buffer.filter(item => item.batch.events.length > 0);
+        const index = routine.batch.events.findIndex(
+          (event) =>
+            event.type === "track" &&
+            event.props?.name === "cco_response" &&
+            typeof event.props.statusCode === "number" &&
+            event.props.statusCode < 400 &&
+            (typeof event.props.durationMs !== "number" ||
+              event.props.durationMs < this.budget.unusualLatencyMs),
+        );
+        routine.batch.events.splice(index, 1);
+        this.stats.droppedCapacity++;
+        this.buffer = this.buffer.filter((item) => item.batch.events.length > 0);
       } else this.stats.droppedCapacity += this.buffer.shift()?.batch.events.length ?? 0;
     }
     if (before !== this.size) this.changed();
@@ -311,8 +445,14 @@ export class EventQueue {
     this.cancelHealthWrite();
     const generation = this.generation;
     const buffer = JSON.parse(snapshot) as StoredBatch[];
-    const timestamps = buffer.flatMap(item => item.batch.events.map(event => event.ts));
-    const health = { ...this.stats, queueDepth: timestamps.length, queueBytes: utf8Bytes(snapshot), retryingCount: this.failures ? timestamps.length : 0, oldestQueuedAt: timestamps.length ? Math.min(...timestamps) : undefined };
+    const timestamps = buffer.flatMap((item) => item.batch.events.map((event) => event.ts));
+    const health = {
+      ...this.stats,
+      queueDepth: timestamps.length,
+      queueBytes: utf8Bytes(snapshot),
+      retryingCount: this.failures ? timestamps.length : 0,
+      oldestQueuedAt: timestamps.length ? Math.min(...timestamps) : undefined,
+    };
     const document = JSON.stringify({ version: 2, buffer, scopeTag: this.healthScope, health });
     this.writes = this.writes
       .catch(() => undefined)
@@ -324,9 +464,13 @@ export class EventQueue {
         } catch (error) {
           if (generation === this.generation && !this.disposed) {
             this.persistenceHealthy = false;
-            this.stats.storageFailures++; this.stats.lastResponseCategory = "local_storage_failure"; this.changed();
+            this.stats.storageFailures++;
+            this.stats.lastResponseCategory = "local_storage_failure";
+            this.changed();
           }
-          throw Object.assign(new Error("Tracki durable storage unavailable"), { code: "secure-storage-unavailable" });
+          throw Object.assign(new Error("Tracki durable storage unavailable"), {
+            code: "secure-storage-unavailable",
+          });
         }
       });
     return this.writes;
@@ -342,7 +486,10 @@ export class EventQueue {
       this.prune();
       // Health-only sampling counters are flushed at lifecycle boundaries even
       // when no event survived sampling. Routine observations coalesce ≤1s.
-      if (!this.buffer.length) { await this.persist().catch(() => {}); return; }
+      if (!this.buffer.length) {
+        await this.persist().catch(() => {});
+        return;
+      }
       while (this.buffer.length && generation === this.generation && !this.disposed) {
         const item = this.buffer[0];
         if (!item) break;
@@ -355,15 +502,18 @@ export class EventQueue {
         // Snapshot the payload: expiry, policy changes or bounds pruning during
         // an asynchronous transport must not alter the submitted envelope.
         const payload: Batch = JSON.parse(JSON.stringify(item.batch));
-        this.stats.lastAttemptAt = this.now(); this.changed();
+        this.stats.lastAttemptAt = this.now();
+        this.changed();
         payload.health = this.healthSnapshot();
         if (utf8Bytes(JSON.stringify(payload)) > this.budget.batchByteLimit) {
           // Persisted legacy or grown health metadata must still respect this
           // client's current wire budget. Preserve an explicit loss reason.
           this.stats.rejected += item.batch.events.length;
           this.stats.lastResponseCategory = "payload_too_large";
-          this.buffer = this.buffer.filter(entry => entry !== item);
-          this.changed(); await this.persist().catch(() => {}); continue;
+          this.buffer = this.buffer.filter((entry) => entry !== item);
+          this.changed();
+          await this.persist().catch(() => {});
+          continue;
         }
         try {
           await this.persist();
@@ -399,11 +549,18 @@ export class EventQueue {
           );
           // Do not discard the in-memory batch unless its acknowledgment is durable.
           const previousStats = { ...this.stats };
-          this.stats.accepted += accepted.size; this.stats.lastSuccessAt = this.now(); this.stats.lastResponseCategory = "accepted";
+          this.stats.accepted += accepted.size;
+          this.stats.lastSuccessAt = this.now();
+          this.stats.lastResponseCategory = "accepted";
           this.changed();
-          try { await this.persist(JSON.stringify(afterAck)); } catch (error) {
+          try {
+            await this.persist(JSON.stringify(afterAck));
+          } catch (error) {
             if (generation === this.generation && !this.disposed) {
-              const failures = this.stats.storageFailures; this.stats = previousStats; this.stats.storageFailures = failures; this.changed();
+              const failures = this.stats.storageFailures;
+              this.stats = previousStats;
+              this.stats.storageFailures = failures;
+              this.changed();
             }
             throw error;
           }
@@ -427,12 +584,15 @@ export class EventQueue {
             this.stats.rejected += count;
             if (category === "unsupported_schema") this.stats.unsupportedSchema += count;
             if (category === "expired") this.stats.droppedExpired += count;
-            this.buffer = this.buffer.filter(entry => entry !== item);
-            this.failures = 0; this.changed(); await this.persist().catch(() => {});
+            this.buffer = this.buffer.filter((entry) => entry !== item);
+            this.failures = 0;
+            this.changed();
+            await this.persist().catch(() => {});
             continue;
           }
           this.failures++;
-          this.changed(); await this.persist().catch(() => {});
+          this.changed();
+          await this.persist().catch(() => {});
           break;
         }
       }
@@ -453,7 +613,8 @@ export class EventQueue {
     for (const item of this.buffer)
       item.batch.events = item.batch.events.filter((event) => this.allowed(event));
     this.buffer = this.buffer.filter((item) => item.batch.events.length > 0);
-    this.stats.rejected += before - this.size; this.changed();
+    this.stats.rejected += before - this.size;
+    this.changed();
     await this.persist();
     this.schedule(FLUSH_INTERVAL_MS);
   }
@@ -462,7 +623,8 @@ export class EventQueue {
     this.cancelTimer();
     this.buffer = [];
     this.failures = 0;
-    this.stats = this.newStats(); this.healthScope = undefined;
+    this.stats = this.newStats();
+    this.healthScope = undefined;
     await this.persist();
     this.cancelTimer();
   }
@@ -470,7 +632,8 @@ export class EventQueue {
   async reconcileScope(): Promise<void> {
     this.generation++;
     this.cancelTimer();
-    if (this.healthScope && this.healthScope !== this.options.scopeTag?.()) this.stats = this.newStats();
+    if (this.healthScope && this.healthScope !== this.options.scopeTag?.())
+      this.stats = this.newStats();
     this.healthScope = this.options.scopeTag?.();
     this.buffer = this.buffer.filter((item) => item.batch.scopeTag === this.options.scopeTag?.());
     this.prune();
@@ -488,7 +651,11 @@ export class EventQueue {
   get size(): number {
     return this.buffer.reduce((count, item) => count + item.batch.events.length, 0);
   }
-  health(): MobileHealthSnapshot & { queuedEvents: number; consecutiveFailures: number; persistenceHealthy: boolean } {
+  health(): MobileHealthSnapshot & {
+    queuedEvents: number;
+    consecutiveFailures: number;
+    persistenceHealthy: boolean;
+  } {
     return {
       ...this.healthSnapshot(),
       queuedEvents: this.size,

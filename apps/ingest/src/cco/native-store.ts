@@ -1,13 +1,7 @@
+import { nativeBuild } from "@tracki/shared/mobile-diagnostics";
 import type postgres from "postgres";
 import type { CcoConfig, Project } from "./config";
 import { CcoError, digest, event, sessionRef } from "./contract";
-import { nativeBuild } from "@tracki/shared/mobile-diagnostics";
-import {
-  nativeHealth,
-  nativeProtocol,
-  type NativeHealth,
-  type NativeProtocol,
-} from "./native-meta";
 import {
   classifyEvidence,
   compatibilityCounts,
@@ -15,6 +9,12 @@ import {
   operationTimelines,
   releaseComparisons,
 } from "./native-engine";
+import {
+  type NativeHealth,
+  type NativeProtocol,
+  nativeHealth,
+  nativeProtocol,
+} from "./native-meta";
 import type {
   NativeDiagnosticEvent,
   NativeDiagnosticsSnapshot,
@@ -29,7 +29,7 @@ function storedHealth(value: unknown): NativeHealth {
   const observedAt =
     value && typeof value === "object"
       ? Number((value as Record<string, unknown>).observedAt)
-      : NaN;
+      : Number.NaN;
   return nativeHealth(value, observedAt);
 }
 export type NativeAcceptanceMetadata = {
@@ -96,9 +96,11 @@ export async function appendNativeIncident(sql: Sql, e: NativeDiagnosticEvent): 
       revision=cco_native_incidents.revision+1 RETURNING status,revision`;
   if (e.accountId)
     await sql`INSERT INTO cco_native_incident_contexts(incident_id,account_id) VALUES(${identity.incidentId},${e.accountId}) ON CONFLICT DO NOTHING`;
-  if (rows[0]?.status === "reopened" || Number(rows[0]?.revision) === 1)
+  const current = rows[0];
+  if (!current) throw new CcoError("native_incident_write_unconfirmed", 503);
+  if (current.status === "reopened" || Number(current.revision) === 1)
     await sql`INSERT INTO cco_native_incident_transitions(incident_id,revision,status,occurred_at)
-    VALUES(${identity.incidentId},${rows[0]!.revision},${rows[0]!.status},${e.occurredAt}) ON CONFLICT DO NOTHING`;
+    VALUES(${identity.incidentId},${current.revision},${current.status},${e.occurredAt}) ON CONFLICT DO NOTHING`;
 }
 
 /** Called inside the same durable-inbox transaction, never after returning an ACK. */
@@ -396,7 +398,7 @@ export async function setNativeIncidentStatus(
     const rows =
       await tx`UPDATE cco_native_incidents SET status=${status},revision=revision+1,resolved_at=CASE WHEN ${status}='resolved' THEN ${now}::bigint ELSE NULL::bigint END
       WHERE incident_id=${incidentId} AND revision=${revision}
-        AND EXISTS(SELECT 1 FROM jsonb_array_elements(${tx.json(config.projects.map(p=>({org:p.orgId,project:p.projectId})))}::jsonb) allowed
+        AND EXISTS(SELECT 1 FROM jsonb_array_elements(${tx.json(config.projects.map((p) => ({ org: p.orgId, project: p.projectId })))}::jsonb) allowed
           WHERE allowed->>'org'=cco_native_incidents.org_id AND allowed->>'project'=cco_native_incidents.project_id) RETURNING revision`;
     if (!rows[0]) throw new CcoError("incident_revision_conflict_or_unavailable", 409);
     const next = Number(rows[0].revision);

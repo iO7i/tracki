@@ -4,24 +4,41 @@ import type { TrackiClient } from "@io7i/tracki-mobile-core";
  * names, paths and arbitrary source text are neither hashed nor emitted. */
 export function normalizedErrorFingerprint(error: unknown): string | undefined {
   let stack: unknown;
-  try { stack = error && typeof error === "object" ? (error as { stack?: unknown }).stack : undefined; } catch { return undefined; }
+  try {
+    stack = error && typeof error === "object" ? (error as { stack?: unknown }).stack : undefined;
+  } catch {
+    return undefined;
+  }
   if (typeof stack !== "string") return undefined;
-  const frames = stack.slice(0, 16384).split("\n").slice(1, 33).flatMap(line => {
-    const frame = line.match(/(?:^|[\s/@\\(])(index|main|app|bundle)(?:\.(android|ios))?\.(bundle|js):(\d{1,7}):(\d{1,7})(?:\)|\s|$)/);
-    return frame ? [`${frame[1]}.${frame[2] ?? "neutral"}.${frame[3]}:${frame[4]}:${frame[5]}`] : [];
-  }).slice(0, 8);
+  const frames = stack
+    .slice(0, 16384)
+    .split("\n")
+    .slice(1, 33)
+    .flatMap((line) => {
+      const frame = line.match(
+        /(?:^|[\s/@\\(])(index|main|app|bundle)(?:\.(android|ios))?\.(bundle|js):(\d{1,7}):(\d{1,7})(?:\)|\s|$)/,
+      );
+      return frame
+        ? [`${frame[1]}.${frame[2] ?? "neutral"}.${frame[3]}:${frame[4]}:${frame[5]}`]
+        : [];
+    })
+    .slice(0, 8);
   if (!frames.length) return undefined;
   const text = frames.join("|");
   // Four independently seeded FNV lanes; an opaque grouping key, not a secret.
-  return [2166136261, 2246822507, 3266489909, 668265263].map(seed => {
-    let h = seed; for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-    return (h >>> 0).toString(16).padStart(8, "0");
-  }).join("");
+  return [2166136261, 2246822507, 3266489909, 668265263]
+    .map((seed) => {
+      let h = seed;
+      for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+      return (h >>> 0).toString(16).padStart(8, "0");
+    })
+    .join("");
 }
 type ErrorClient = Pick<TrackiClient, "error"> & Partial<Pick<TrackiClient, "diagnostic">>;
 function emitError(client: ErrorClient, code: string, error?: unknown): void {
   const fingerprint = normalizedErrorFingerprint(error);
-  if (client.diagnostic && fingerprint) client.diagnostic({ type: "error", ts: Date.now(), props: { code }, fingerprint });
+  if (client.diagnostic && fingerprint)
+    client.diagnostic({ type: "error", ts: Date.now(), props: { code }, fingerprint });
   else client.error(code);
 }
 
@@ -62,11 +79,27 @@ export function observeJavaScriptErrors(
 export interface UnhandledRejectionSource {
   subscribe(listener: (reason: unknown) => void): () => void;
 }
-export function observeUnhandledRejections(client: ErrorClient, source?: UnhandledRejectionSource): () => void {
+export function observeUnhandledRejections(
+  client: ErrorClient,
+  source?: UnhandledRejectionSource,
+): () => void {
   if (!source) return () => {};
   let disposed = false;
-  const unsubscribe = source.subscribe(reason => { if (!disposed) { try { emitError(client, "JS_ERROR", reason); } catch { /* host remains unaffected */ } } });
-  return () => { if (!disposed) { disposed = true; unsubscribe(); } };
+  const unsubscribe = source.subscribe((reason) => {
+    if (!disposed) {
+      try {
+        emitError(client, "JS_ERROR", reason);
+      } catch {
+        /* host remains unaffected */
+      }
+    }
+  });
+  return () => {
+    if (!disposed) {
+      disposed = true;
+      unsubscribe();
+    }
+  };
 }
 
 /** Host-owned crash integration: emits a code only; never receives crash payloads. */
