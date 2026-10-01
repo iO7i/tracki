@@ -1,6 +1,20 @@
 /** Native telemetry contract. Pure JS; no DOM, text/input, screenshots, or network bodies. */
 export type CapturePolicy = { diagnostics: boolean; activity: boolean };
 export type NativeBuild = { buildId?: string; runtimeVersion?: string; updateId?: string };
+export type NativeCorrelation = {
+  clientRequestId?: string; requestId?: string; operationId?: string; jobId?: string;
+  stage?: "request" | "operation" | "job" | "outcome";
+  outcomeState?: "accepted" | "pending" | "running" | "succeeded" | "failed" | "cancelled" | "unknown";
+  outcomeSource?: "client" | "backend" | "job" | "readback";
+};
+export type MobileHealthSnapshot = {
+  reporterId: string; revision: number; observedAt: number;
+  observed: number; sampledOut: number; droppedCapacity: number; droppedExpired: number;
+  rejected: number; storageFailures: number; unsupportedSchema: number; accepted: number;
+  queueDepth: number; queueBytes: number; retryingCount: number;
+  lastAttemptAt?: number; lastSuccessAt?: number; oldestQueuedAt?: number;
+  lastResponseCategory: string; routineSuccessSampleRate: number;
+};
 export type MobileDiagnosticEvent = {
   eventId?: string;
   type: string;
@@ -8,6 +22,9 @@ export type MobileDiagnosticEvent = {
   path?: string;
   props?: Record<string, unknown>;
   traceContext?: { traceId: string; spanId: string; parentSpanId?: string };
+  correlation?: NativeCorrelation;
+  sampleRate?: number;
+  fingerprint?: string;
 };
 const events = new Set([
   "error",
@@ -193,6 +210,11 @@ export function sanitizeMobileEvent(event: MobileDiagnosticEvent): MobileDiagnos
     path: safeNativeRoute(event.path),
     props,
   };
+  const correlation = sanitizeNativeCorrelation(event.correlation);
+  if (Object.keys(correlation).length) result.correlation = correlation;
+  if (typeof event.sampleRate === "number" && Number.isFinite(event.sampleRate) && event.sampleRate > 0 && event.sampleRate <= 1)
+    result.sampleRate = event.sampleRate;
+  if (typeof event.fingerprint === "string" && /^[a-f0-9]{16,64}$/.test(event.fingerprint)) result.fingerprint = event.fingerprint;
   if (typeof event.eventId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(event.eventId))
     result.eventId = event.eventId;
   const trace = event.traceContext;
@@ -205,5 +227,48 @@ export function sanitizeMobileEvent(event: MobileDiagnosticEvent): MobileDiagnos
       ...(hex(trace.parentSpanId, 16) ? { parentSpanId: trace.parentSpanId } : {}),
     };
   }
+  return result;
+}
+
+/** Accept generated opaque identifiers only; never arbitrary labels or user text. */
+export function nativeOpaqueId(value: unknown): string | undefined {
+  return typeof value === "string" && /^(?:(?:req|op|job)_)?(?:[a-f0-9]{16,64}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|[0-9A-HJKMNP-TV-Z]{26})$/.test(value) ? value : undefined;
+}
+export function sanitizeNativeCorrelation(value: unknown): NativeCorrelation {
+  const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const result: NativeCorrelation = {};
+  for (const key of ["clientRequestId", "requestId", "operationId", "jobId"] as const) {
+    const id = nativeOpaqueId(raw[key]); if (id) result[key] = id;
+  }
+  for (const [key, allowed] of [
+    ["stage", ["request", "operation", "job", "outcome"]],
+    ["outcomeState", ["accepted", "pending", "running", "succeeded", "failed", "cancelled", "unknown"]],
+    ["outcomeSource", ["client", "backend", "job", "readback"]],
+  ] as const) {
+    if (typeof raw[key] === "string" && (allowed as readonly string[]).includes(raw[key] as string))
+      (result as Record<string, unknown>)[key] = raw[key];
+  }
+  return result;
+}
+export const nativeResponseCategories = ["none", "accepted", "authentication_rejected", "context_unverified", "revoked_context", "environment_mismatch", "unsupported_schema", "rate_limited", "payload_too_large", "retryable_server_failure", "permanent_rejection", "network_unavailable", "expired", "local_storage_failure", "invalid_acknowledgment"] as const;
+export function sanitizeNativeHealth(value: unknown): MobileHealthSnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  const reporterId = nativeOpaqueId(raw.reporterId);
+  if (!reporterId || !Number.isSafeInteger(raw.revision) || (raw.revision as number) < 1 || (raw.revision as number) > 1e9 || !Number.isSafeInteger(raw.observedAt) || (raw.observedAt as number) <= 0) return null;
+  const result = { reporterId, revision: raw.revision, observedAt: raw.observedAt } as MobileHealthSnapshot;
+  for (const key of ["observed", "sampledOut", "droppedCapacity", "droppedExpired", "rejected", "storageFailures", "unsupportedSchema", "accepted", "queueDepth", "queueBytes", "retryingCount"] as const) {
+    if (!Number.isSafeInteger(raw[key]) || (raw[key] as number) < 0 || (raw[key] as number) > 1e9) return null;
+    result[key] = raw[key] as number;
+  }
+  for (const key of ["lastAttemptAt", "lastSuccessAt", "oldestQueuedAt"] as const) {
+    if (raw[key] === undefined) continue;
+    if (!Number.isSafeInteger(raw[key]) || (raw[key] as number) <= 0 || (raw[key] as number) > result.observedAt + 120000) return null;
+    result[key] = raw[key] as number;
+  }
+  if (typeof raw.lastResponseCategory !== "string" || !(nativeResponseCategories as readonly string[]).includes(raw.lastResponseCategory)) return null;
+  if (typeof raw.routineSuccessSampleRate !== "number" || !Number.isFinite(raw.routineSuccessSampleRate) || raw.routineSuccessSampleRate < 0 || raw.routineSuccessSampleRate > 1) return null;
+  result.lastResponseCategory = raw.lastResponseCategory;
+  result.routineSuccessSampleRate = raw.routineSuccessSampleRate;
   return result;
 }

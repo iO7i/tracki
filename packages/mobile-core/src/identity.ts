@@ -26,6 +26,7 @@ export class Identity {
   private sessionId = "";
   private lastActivity = 0;
   private writes: Promise<void> = Promise.resolve();
+  private restoredSession = false;
 
   constructor(
     private readonly storage: KeyValueStorage,
@@ -47,6 +48,7 @@ export class Identity {
     this.anonId = anon || this.persist("anon", this.newId("anon"));
     this.userId = user || undefined;
     this.sessionId = sess || "";
+    this.restoredSession = !!sess;
     this.lastActivity = Number(ts ?? 0) || 0;
     this.touchSession();
     await this.writes;
@@ -84,6 +86,15 @@ export class Identity {
 
   currentSession(): string {
     return this.sessionId;
+  }
+  /** Installed binary/update changes start a new session. Historical queue
+   * envelopes retain their previous session and grant rather than relabeling. */
+  async bindBuild(signature: string): Promise<void> {
+    let previous: string | null = null;
+    try { previous = await this.storage.get(this.key("build_signature")); } catch { /* unavailable persistence must not affect the app */ }
+    if ((previous !== null && previous !== signature) || (previous === null && this.restoredSession)) this.rotateSession();
+    this.persist("build_signature", signature);
+    await this.writes;
   }
 
   /** Logout clears this namespace only; serialized writes cannot restore the old user. */

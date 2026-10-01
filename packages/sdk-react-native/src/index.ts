@@ -15,6 +15,9 @@ export {
 export {
   observeJavaScriptErrors,
   observeNativeCrashSignals,
+  observeUnhandledRejections,
+  normalizedErrorFingerprint,
+  type UnhandledRejectionSource,
   type JavaScriptErrorSource,
   type NativeCrashSource,
 } from "./diagnostics";
@@ -30,4 +33,4 @@ export type {
   RenderIntent,
   TrackiClient,
   Transport,
-} from "@tracki/mobile-core";
+} from "@io7i/tracki-mobile-core";

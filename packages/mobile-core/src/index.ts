@@ -11,6 +11,7 @@ export { createActionEngine, pickVariant } from "./actions";
 export { createAssistHandler } from "./assist";
 export { createCtaRouter, ctaKind } from "./cta";
 export { fetchTransport, TransportHttpError } from "./transport";
+export { nativeProtocol, defaultCollectionBudget, collectionBudget, utf8Bytes, deliveryCategory, type CollectionBudget } from "./reliability";
 export type {
   ActionIntent,
   AssistIntent,
@@ -26,6 +27,8 @@ export type {
   KeyValueStorage,
   LocalizedContent,
   MobilePlatform,
+  MobileHealthSnapshot,
+  NativeCorrelation,
   Renderer,
   RenderIntent,
   TourStepContent,

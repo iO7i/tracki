@@ -1,6 +1,6 @@
 {
-  "name": "@tracki/mobile-core",
-  "version": "0.1.0",
+  "name": "@io7i/tracki-mobile-core",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
   "exports": {
@@ -25,5 +25,17 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "README.md"]
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iO7i/tracki.git",
+    "directory": "packages\\mobile-core"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  }
 }

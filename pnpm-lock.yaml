@@ -45,7 +45,7 @@ importers:
         version: 2.4.3
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(gel@2.2.0)(postgres@3.4.9(patch_hash=eoioo55qhah4v2qdem5sxzxayu))
+        version: 0.45.2(@electric-sql/pglite@0.3.14)(gel@2.2.0)(postgres@3.4.9(patch_hash=eoioo55qhah4v2qdem5sxzxayu))
       ioredis:
         specifier: ^5.4.2
         version: 5.11.1
@@ -129,8 +129,11 @@ importers:
         specifier: ^3.4.5
         version: 3.4.9(patch_hash=eoioo55qhah4v2qdem5sxzxayu)
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: 0.3.14
+        version: 0.3.14
       '@tracki/mobile-core':
-        specifier: workspace:*
+        specifier: workspace:@io7i/tracki-mobile-core@0.2.0
         version: link:../../packages/mobile-core
       '@types/node':
         specifier: ^22.10.0
@@ -214,8 +217,8 @@ importers:
 
   packages/sdk-react-native:
     dependencies:
-      '@tracki/mobile-core':
-        specifier: 0.1.0
+      '@io7i/tracki-mobile-core':
+        specifier: workspace:0.2.0
         version: link:../mobile-core
     devDependencies:
       '@react-native-async-storage/async-storage':
@@ -486,6 +489,9 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@electric-sql/pglite@0.3.14':
+    resolution: {integrity: sha512-3DB258dhqdsArOI1fIt7cb9RpUOgcDg5hXWVgVHAeqVQ/qxtFy605QKs4gx6mFq3jWsSPqDN8TgSEsqC3OfV9Q==}
 
   '@emnapi/runtime@1.10.0':
     resolution: {integrity: sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA==}
@@ -3883,6 +3889,8 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
+  '@electric-sql/pglite@0.3.14': {}
+
   '@emnapi/runtime@1.10.0':
     dependencies:
       tslib: 2.8.1
@@ -5107,8 +5115,9 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.22.4
 
-  drizzle-orm@0.45.2(gel@2.2.0)(postgres@3.4.9(patch_hash=eoioo55qhah4v2qdem5sxzxayu)):
+  drizzle-orm@0.45.2(@electric-sql/pglite@0.3.14)(gel@2.2.0)(postgres@3.4.9(patch_hash=eoioo55qhah4v2qdem5sxzxayu)):
     optionalDependencies:
+      '@electric-sql/pglite': 0.3.14
       gel: 2.2.0
       postgres: 3.4.9(patch_hash=eoioo55qhah4v2qdem5sxzxayu)
 

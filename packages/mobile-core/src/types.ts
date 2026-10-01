@@ -14,6 +14,21 @@
 
 export type MobilePlatform = "ios" | "android";
 
+export type NativeCorrelation = {
+  clientRequestId?: string; requestId?: string; operationId?: string; jobId?: string;
+  stage?: "request" | "operation" | "job" | "outcome";
+  outcomeState?: "accepted" | "pending" | "running" | "succeeded" | "failed" | "cancelled" | "unknown";
+  outcomeSource?: "client" | "backend" | "job" | "readback";
+};
+export type MobileHealthSnapshot = {
+  reporterId: string; revision: number; observedAt: number;
+  observed: number; sampledOut: number; droppedCapacity: number; droppedExpired: number;
+  rejected: number; storageFailures: number; unsupportedSchema: number; accepted: number;
+  queueDepth: number; queueBytes: number; retryingCount: number;
+  lastAttemptAt?: number; lastSuccessAt?: number; oldestQueuedAt?: number;
+  lastResponseCategory: string; routineSuccessSampleRate: number;
+};
+
 export interface DeviceInfo {
   platform: MobilePlatform;
   osVersion?: string;
@@ -23,6 +38,9 @@ export interface DeviceInfo {
 }
 
 export interface EventInput {
+  correlation?: NativeCorrelation;
+  sampleRate?: number;
+  fingerprint?: string;
   eventId?: string;
   type: string;
   ts: number;
@@ -34,6 +52,8 @@ export interface EventInput {
 }
 
 export interface Batch {
+  protocol?: { sdkVersion: string; schemaVersion: number; capabilities: string[]; requiredCapabilities?: string[] };
+  health?: MobileHealthSnapshot;
   key: string;
   anonId: string;
   userId?: string;
@@ -179,4 +199,7 @@ export interface TrackiConfig {
   scopeTag?: string;
   build?: BuildIdentity;
   initialAppState?: "active" | "background";
+  collectionBudget?: Partial<import("./reliability").CollectionBudget>;
+  /** Deterministic sampling seam; normal clients use Math.random. */
+  sampleRandom?: () => number;
 }

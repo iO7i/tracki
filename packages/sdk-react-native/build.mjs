@@ -17,7 +17,7 @@ await build({
   platform: "neutral",
   target: "es2022",
   external: [
-    "@tracki/mobile-core",
+    "@io7i/tracki-mobile-core",
     "react",
     "react/*",
     "react-native",

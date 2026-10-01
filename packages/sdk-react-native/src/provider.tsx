@@ -1,4 +1,4 @@
-import type { RenderIntent, TrackiClient } from "@tracki/mobile-core";
+import type { RenderIntent, TrackiClient } from "@io7i/tracki-mobile-core";
 import {
   type ReactNode,
   createContext,

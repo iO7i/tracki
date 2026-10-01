@@ -6,7 +6,7 @@ import {
   type TrackiClient,
   type TrackiConfig,
   createTracki,
-} from "@tracki/mobile-core";
+} from "@io7i/tracki-mobile-core";
 
 /**
  * Platform seams, injected so the adapter is unit-testable without React
@@ -42,6 +42,8 @@ export interface ReactNativeTrackiOptions {
   environment?: TrackiConfig["environment"];
   scopeTag?: string;
   build?: TrackiConfig["build"];
+  collectionBudget?: TrackiConfig["collectionBudget"];
+  sampleRandom?: TrackiConfig["sampleRandom"];
 }
 
 /**
@@ -76,6 +78,8 @@ export async function createTrackiClient(
     environment: options.environment,
     scopeTag: options.scopeTag,
     build: options.build,
+    collectionBudget: options.collectionBudget,
+    sampleRandom: options.sampleRandom,
     initialAppState: native.appState,
   });
 

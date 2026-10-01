@@ -1,4 +1,4 @@
-import type { KeyValueStorage, RenderIntent } from "@tracki/mobile-core";
+import type { KeyValueStorage, RenderIntent } from "@io7i/tracki-mobile-core";
 import { describe, expect, it } from "vitest";
 import { type NativeBindings, createIntentBus, createTrackiClient } from "./adapter";
 
@@ -57,7 +57,7 @@ function fakeTransport() {
     posts,
     post: async (url: string, body: unknown) => {
       posts.push({ url, body: JSON.parse(JSON.stringify(body)) });
-      return { ok: true };
+      return { acceptedClientIds: (body as { events?: { eventId: string }[] }).events?.map(event => event.eventId) ?? [] };
     },
     get: async () => ({ actions: [] }),
   };
@@ -68,7 +68,7 @@ describe("createTrackiClient (React Native adapter)", () => {
     const native = fakeNative();
     const transport = fakeTransport();
     const { client, dispose } = await createTrackiClient(
-      { key: "pk_rn", endpoint: "https://i.test", appVersion: "1.4.0", transport },
+      { key: "pk_rn", endpoint: "https://i.test", appVersion: "1.4.0", transport, capturePolicy: { activity: true, diagnostics: true } },
       native.bindings,
     );
     await client.ready;
